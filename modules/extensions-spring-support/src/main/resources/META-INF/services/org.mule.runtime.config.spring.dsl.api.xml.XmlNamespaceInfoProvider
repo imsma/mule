@@ -1,0 +1,2 @@
+org.mule.runtime.module.extension.internal.config.dsl.config.ExtensionXmlNamespaceInfoProvider
+org.mule.runtime.module.extension.internal.config.dsl.config.HeisenbergXmlNamespaceInfoProvider

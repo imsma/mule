@@ -22,12 +22,15 @@ import org.mule.runtime.core.api.config.ConfigurationException;
 
 import com.google.common.collect.ImmutableSet;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.Consumer;
 
 import org.springframework.util.PropertyPlaceholderHelper;
@@ -95,6 +98,7 @@ public class ApplicationModel
     public static final ComponentIdentifier MULE_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(MULE_ROOT_ELEMENT).build();
     public static final ComponentIdentifier MULE_DOMAIN_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(MULE_DOMAIN_ROOT_ELEMENT).build();
     public static final ComponentIdentifier SPRING_PROPERTY_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(SPRING_NAMESPACE).withName(PROPERTY_ELEMENT).build();
+    public static final ComponentIdentifier SPRING_PROPERTY_PLACEHOLDER = new ComponentIdentifier.Builder().withNamespace("context").withName("property-placeholder").build();
     public static final ComponentIdentifier MULE_PROPERTY_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(PROPERTY_ELEMENT).build();
     public static final ComponentIdentifier ANNOTATIONS_ELEMENT_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(ANNOTATION_ELEMENT).build();
     public static final ComponentIdentifier MESSAGE_FILTER_ELEMENT_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(MESSAGE_FILTER_ELEMENT).build();
@@ -171,6 +175,26 @@ public class ApplicationModel
     {
         convertConfigFileToComponentModel(applicationConfig);
         validateModel();
+        executeOnEveryComponentTree( componentModel -> {
+            if (componentModel.getIdentifier().equals(ApplicationModel.SPRING_PROPERTY_PLACEHOLDER))
+            {
+                String filename = componentModel.getParameters().get("location");
+                Properties properties = new Properties();
+                try (InputStream fileContent = getClass().getClassLoader().getResource(filename).openStream())
+                {
+                    properties.load(fileContent);
+                    for (Object key : properties.keySet())
+                    {
+                        System.setProperty((String) key, properties.getProperty((String) key));
+                    }
+                    //System.setProperties(properties);
+                }
+                catch (IOException e)
+                {
+                    throw new MuleRuntimeException(e);
+                }
+            }
+         });
     }
 
     /**

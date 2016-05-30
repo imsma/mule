@@ -6,14 +6,13 @@
  */
 package org.mule.runtime.config.spring;
 
-import static org.mule.runtime.config.spring.parsers.AbstractMuleBeanDefinitionParser.*;
-import org.mule.runtime.config.spring.dsl.processor.ApplicationConfig;
+import static org.mule.runtime.config.spring.parsers.AbstractMuleBeanDefinitionParser.getConfigFileIdentifier;
 import org.mule.runtime.config.spring.dsl.model.ApplicationModel;
+import org.mule.runtime.config.spring.dsl.processor.ApplicationConfig;
 import org.mule.runtime.config.spring.dsl.processor.ConfigFile;
 import org.mule.runtime.config.spring.dsl.processor.ConfigLine;
 import org.mule.runtime.config.spring.dsl.processor.xml.XmlApplicationParser;
 import org.mule.runtime.config.spring.dsl.spring.BeanDefinitionFactory;
-import org.mule.runtime.config.spring.parsers.AbstractMuleBeanDefinitionParser;
 import org.mule.runtime.core.api.MuleRuntimeException;
 
 import java.util.ArrayList;
@@ -53,7 +52,7 @@ public class MuleBeanDefinitionDocumentReader extends DefaultBeanDefinitionDocum
 
     protected MuleHierarchicalBeanDefinitionParserDelegate createBeanDefinitionParserDelegate(XmlReaderContext readerContext)
     {
-        return new MuleHierarchicalBeanDefinitionParserDelegate(readerContext, this, () -> { return applicationModelStack.peek();}, beanDefinitionFactory, getElementsValidator());
+        return new MuleHierarchicalBeanDefinitionParserDelegate(readerContext, this, applicationModelStack::peek, beanDefinitionFactory, getElementsValidator());
     }
 
     protected ElementValidator[] getElementsValidator()

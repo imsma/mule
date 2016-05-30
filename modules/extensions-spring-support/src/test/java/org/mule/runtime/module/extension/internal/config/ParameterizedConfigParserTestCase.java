@@ -24,6 +24,7 @@ import static org.mule.test.heisenberg.extension.HeisenbergExtension.AGE;
 import static org.mule.test.heisenberg.extension.HeisenbergExtension.HEISENBERG;
 import static org.mule.test.heisenberg.extension.model.types.WeaponType.FIRE_WEAPON;
 import org.mule.runtime.core.api.MuleEvent;
+import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.test.heisenberg.extension.HeisenbergExtension;
 import org.mule.test.heisenberg.extension.model.HealthStatus;
 import org.mule.test.heisenberg.extension.model.KnockeableDoor;
@@ -286,6 +287,12 @@ public class ParameterizedConfigParserTestCase extends AbstractConfigParserTestC
         calendar.set(YEAR, DEATH_YEAR);
 
         return calendar;
+    }
+
+    public static KnockeableDoor getDoor() throws Exception
+    {
+        ValueResolver<KnockeableDoor> door = muleContext.getRegistry().lookupObject("door");
+        return door.resolve(getTestEvent(""));
     }
 
     private void assertLabeledRicin(HeisenbergExtension heisenberg)

@@ -135,9 +135,7 @@ public class MuleArtifactContext extends AbstractXmlApplicationContext
         ServiceLoader<ComponentBuildingDefinitionProvider> serviceLoader = ServiceLoader.load(ComponentBuildingDefinitionProvider.class);
         serviceLoader.forEach(componentBuildingDefinitionProvider -> {
             componentBuildingDefinitionProvider.init(muleContext);
-            componentBuildingDefinitionProvider.getComponentBuildingDefinitions().stream().forEach(componentBuildingDefinition -> {
-                this.componentBuildingDefinitionRegistry.register(componentBuildingDefinition);
-            });
+            componentBuildingDefinitionProvider.getComponentBuildingDefinitions().stream().forEach(componentBuildingDefinitionRegistry::register);
         });
 
         this.beanDefinitionFactory = new BeanDefinitionFactory(componentBuildingDefinitionRegistry);

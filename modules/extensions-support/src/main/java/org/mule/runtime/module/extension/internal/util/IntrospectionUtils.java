@@ -21,8 +21,6 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.withAnnotation;
 import static org.reflections.ReflectionUtils.withModifier;
 import static org.reflections.ReflectionUtils.withName;
-import static org.reflections.ReflectionUtils.withTypeAssignableTo;
-
 import org.mule.metadata.api.ClassTypeLoader;
 import org.mule.metadata.api.builder.BaseTypeBuilder;
 import org.mule.metadata.api.model.AnyType;
@@ -214,27 +212,27 @@ public final class IntrospectionUtils
 
     public static Field getField(Class<?> clazz, ParameterModel parameterModel)
     {
-        return getField(clazz, getMemberName(parameterModel, parameterModel.getName()), getType(parameterModel.getType()));
+        return getField(clazz, getMemberName(parameterModel, parameterModel.getName()));
     }
 
     public static Field getField(Class<?> clazz, ParameterDeclaration parameterDeclaration)
     {
-        return getField(clazz, getMemberName(parameterDeclaration, parameterDeclaration.getName()), getType(parameterDeclaration.getType()));
+        return getField(clazz, getMemberName(parameterDeclaration, parameterDeclaration.getName()));
     }
 
-    public static Field getField(Class<?> clazz, String name, Class<?> type)
+    public static Field getField(Class<?> clazz, String name)
     {
-        Collection<Field> candidates = getAllFields(clazz, withName(name), withTypeAssignableTo(type));
+        Collection<Field> candidates = getAllFields(clazz, withName(name));
         return CollectionUtils.isEmpty(candidates) ? null : candidates.iterator().next();
     }
 
-    public static Field getFieldByAlias(Class<?> clazz, String alias, Class<?> type)
+    public static Field getFieldByAlias(Class<?> clazz, String alias)
     {
-        Collection<Field> candidates = getAllFields(clazz, withAnnotation(Alias.class), withTypeAssignableTo(type));
+        Collection<Field> candidates = getAllFields(clazz, withAnnotation(Alias.class));
         return candidates.stream()
                 .filter(f -> alias.equals(f.getAnnotation(Alias.class).value()))
                 .findFirst()
-                .orElseGet(() -> getField(clazz, alias, type));
+                .orElseGet(() -> getField(clazz, alias));
     }
 
     public static boolean hasDefaultConstructor(Class<?> clazz)
@@ -425,8 +423,8 @@ public final class IntrospectionUtils
         {
             PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(extensionType).getPropertyDescriptors();
             return stream(propertyDescriptors)
-                    .filter(p -> getField(extensionType, p.getName(), p.getPropertyType()) != null)
-                    .map(p -> getField(extensionType, p.getName(), p.getPropertyType()))
+                    .map(p -> getField(extensionType, p.getName()))
+                    .filter(field -> field != null)
                     .collect(toSet());
         }
         catch (IntrospectionException e)

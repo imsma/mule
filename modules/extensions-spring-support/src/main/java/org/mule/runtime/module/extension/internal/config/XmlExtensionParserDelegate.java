@@ -357,7 +357,7 @@ final class XmlExtensionParserDelegate
                             "A fixed value was given for parameter '%s' but it only supports expressions", parameterModel.getName())));
                 }
 
-                resolverSet.add(parameterModel, resolver);
+                resolverSet.add(parameterModel.getName(), resolver);
             }
         }
 
@@ -678,7 +678,7 @@ final class XmlExtensionParserDelegate
 
             if (resolver != null)
             {
-                Field field = IntrospectionUtils.getFieldByAlias(objectClass, parameterName, getType(fieldType));
+                Field field = IntrospectionUtils.getFieldByAlias(objectClass, parameterName);
                 if (field != null)
                 {
                     builder.addPropertyResolver(field, resolver);
@@ -760,11 +760,11 @@ final class XmlExtensionParserDelegate
 
         if (nestedProcessors.size() == 1 && !(parameterModel.getType() instanceof ArrayType))
         {
-            resolverSet.add(parameterModel, new NestedProcessorValueResolver(nestedProcessors.get(0)));
+            resolverSet.add(parameterModel.getName(), new NestedProcessorValueResolver(nestedProcessors.get(0)));
         }
         else
         {
-            resolverSet.add(parameterModel, CollectionValueResolver.of(ArrayList.class, nestedProcessorResolvers));
+            resolverSet.add(parameterModel.getName(), CollectionValueResolver.of(ArrayList.class, nestedProcessorResolvers));
         }
     }
 
