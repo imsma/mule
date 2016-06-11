@@ -18,6 +18,7 @@ import static org.mule.tck.junit4.matcher.DataTypeMatcher.like;
 
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.DefaultMuleEvent;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleContext;
@@ -27,7 +28,6 @@ import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.config.MuleConfiguration;
 import org.mule.runtime.core.api.construct.FlowConstruct;
 import org.mule.runtime.core.api.expression.ExpressionManager;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 import org.mule.runtime.core.transformer.types.TypedValue;
 import org.mule.tck.junit4.AbstractMuleTestCase;
 
@@ -105,7 +105,7 @@ public class SetPayloadMessageProcessorTestCase extends AbstractMuleTestCase
         setPayloadMessageProcessor.setValue(EXPRESSION);
         when(expressionManager.isExpression(EXPRESSION)).thenReturn(true);
         setPayloadMessageProcessor.initialise();
-        TypedValue typedValue = new TypedValue(PLAIN_TEXT, DataType.STRING_DATA_TYPE);
+        TypedValue typedValue = new TypedValue(PLAIN_TEXT, DataType.STRING);
         when(expressionManager.evaluateTyped(EXPRESSION, muleEvent)).thenReturn(typedValue);
 
 

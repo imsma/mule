@@ -13,11 +13,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import org.mule.functional.junit4.FunctionalTestCase;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.client.MuleClient;
 import org.mule.runtime.core.api.config.MuleProperties;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 import org.mule.tck.junit4.rule.DynamicPort;
 
 import java.nio.charset.StandardCharsets;

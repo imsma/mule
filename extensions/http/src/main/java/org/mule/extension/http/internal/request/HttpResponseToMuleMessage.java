@@ -7,7 +7,6 @@
 package org.mule.extension.http.internal.request;
 
 import static org.mule.runtime.core.api.config.MuleProperties.SYSTEM_PROPERTY_PREFIX;
-import static org.mule.runtime.core.transformer.types.DataTypeFactory.createFromDataType;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.CONTENT_TYPE;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.SET_COOKIE;
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.SET_COOKIE2;
@@ -19,10 +18,10 @@ import org.mule.extension.http.internal.request.builder.HttpResponseAttributesBu
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MessagingException;
 import org.mule.runtime.core.api.MuleEvent;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 import org.mule.runtime.core.util.DataTypeUtils;
 import org.mule.runtime.core.util.IOUtils;
 import org.mule.runtime.core.util.StringUtils;
@@ -110,7 +109,7 @@ public class HttpResponseToMuleMessage
 
         if (encoding != null)
         {
-            dataType = createFromDataType(dataType, encoding);
+            dataType = DataType.builder().from(dataType).encoding(encoding).build();
         }
         MuleMessage responseMessage = new DefaultMuleMessage(payload, dataType, responseAttributes);
 

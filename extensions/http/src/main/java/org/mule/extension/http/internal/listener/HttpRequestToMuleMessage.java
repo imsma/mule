@@ -11,13 +11,14 @@ import static org.mule.runtime.core.api.config.MuleProperties.SYSTEM_PROPERTY_PR
 import static org.mule.runtime.module.http.api.HttpHeaders.Names.CONTENT_TYPE;
 import static org.mule.runtime.module.http.internal.HttpParser.decodeUrlEncodedBody;
 import static org.mule.runtime.module.http.internal.multipart.HttpPartDataSource.createDataHandlerFrom;
+
 import org.mule.extension.http.api.HttpRequestAttributes;
 import org.mule.runtime.api.message.MuleMessage;
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.DataTypeBuilder;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleContext;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.util.IOUtils;
 import org.mule.runtime.module.http.api.HttpHeaders;
 import org.mule.runtime.module.http.internal.ParameterMap;
@@ -57,12 +58,15 @@ public class HttpRequestToMuleMessage
         final String contentTypeValue = request.getHeaderValueIgnoreCase(CONTENT_TYPE);
         MediaType mediaType = null;
         String encoding = null;
+        final DataTypeBuilder dataTypeBuilder = DataType.builder();
         if (contentTypeValue != null)
         {
             try
             {
                 mediaType = MediaType.parse(contentTypeValue);
+                dataTypeBuilder.mimeType(contentTypeValue);
                 encoding = mediaType.charset().isPresent() ? mediaType.charset().get().name() : Charset.defaultCharset().name();
+                dataTypeBuilder.encoding(encoding);
             }
             catch (IllegalArgumentException e)
             {
@@ -76,6 +80,7 @@ public class HttpRequestToMuleMessage
                     encoding = Charset.defaultCharset().name();
                     logger.warn(String.format("%s when parsing Content-Type '%s': %s", e.getClass().getName(), contentTypeValue, e.getMessage()));
                     logger.warn(String.format("Using default encoding: %s", encoding));
+                    dataTypeBuilder.encoding(encoding);
                 }
             }
         }
@@ -131,12 +136,10 @@ public class HttpRequestToMuleMessage
                 type = InputStream.class;
             }
         }
+        dataTypeBuilder.type(type);
 
         HttpRequestAttributes attributes = new HttpRequestAttributesBuilder().setRequestContext(requestContext)
                 .setListenerPath(listenerPath).setParts(parts).build();
-        String resolvedMimeType = mediaType != null ? mediaType.toString() : null;
-        DataType dataType = DataTypeFactory.create(type, resolvedMimeType, encoding);
-
-        return new DefaultMuleMessage(payload, dataType, attributes, muleContext);
+        return new DefaultMuleMessage(payload, dataTypeBuilder.build(), attributes, muleContext);
     }
 }

@@ -12,20 +12,19 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mule.runtime.api.metadata.MimeTypes.APPLICATION_XML;
 import static org.mule.runtime.core.MessageExchangePattern.ONE_WAY;
 import static org.mule.runtime.core.MessageExchangePattern.REQUEST_RESPONSE;
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_FORCE_SYNC_PROPERTY;
-import static org.mule.runtime.core.transformer.types.MimeTypes.APPLICATION_XML;
 
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MutableMuleMessage;
 import org.mule.runtime.core.api.construct.FlowConstruct;
 import org.mule.runtime.core.construct.Flow;
 import org.mule.runtime.core.construct.flow.DefaultFlowProcessingStrategy;
 import org.mule.runtime.core.processor.strategy.NonBlockingProcessingStrategy;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 import org.mule.tck.junit4.AbstractMuleTestCase;
 import org.mule.tck.junit4.matcher.DataTypeMatcher;
 import org.mule.tck.size.SmallTest;
@@ -59,7 +58,7 @@ public class DefaultMuleEventTestCase extends AbstractMuleTestCase
     @Test
     public void setFlowVariableCustomDataType() throws Exception
     {
-        DataType dataType = DataTypeFactory.create(String.class, APPLICATION_XML, CUSTOM_ENCODING);
+        DataType<String> dataType = DataType.builder(String.class).mimeType(APPLICATION_XML).encoding(CUSTOM_ENCODING).build();
 
         muleEvent.setFlowVariable(PROPERTY_NAME, PROPERTY_VALUE, dataType);
 
@@ -79,7 +78,7 @@ public class DefaultMuleEventTestCase extends AbstractMuleTestCase
     @Test
     public void setSessionVariableCustomDataType() throws Exception
     {
-        DataType dataType = DataTypeFactory.create(String.class, APPLICATION_XML, CUSTOM_ENCODING);
+        DataType<String> dataType = DataType.builder(String.class).mimeType(APPLICATION_XML).encoding(CUSTOM_ENCODING).build();
 
         muleEvent.getSession().setProperty(PROPERTY_NAME, PROPERTY_VALUE, dataType);
 
