@@ -6,14 +6,9 @@
  */
 package org.mule.runtime.core.transformer.types;
 
-import static org.mule.runtime.core.util.Preconditions.checkNotNull;
-
 import org.mule.runtime.api.metadata.DataType;
-import org.mule.runtime.api.metadata.SimpleDataType;
-import org.mule.runtime.core.util.generics.GenericsUtils;
-import org.mule.runtime.core.util.generics.MethodParameter;
+import org.mule.runtime.api.metadata.MimeTypes;
 
-import java.lang.reflect.Method;
 import java.util.Collection;
 
 /**
@@ -28,104 +23,17 @@ public class CollectionDataType<C extends Collection<T>, T> extends SimpleDataTy
 {
     private static final long serialVersionUID = 3600944898597616006L;
 
-    private final Class<T> itmesType;
+    private final Class<T> itemsType;
 
-    /**
-     * Creates an untyped collection data type
-     *
-     * @param collectionType the collection class type
-     */
-    public CollectionDataType(Class<C> collectionType)
-    {
-        super(collectionType);
-        checkCollectionTypeForNull(collectionType);
-        this.itmesType = (Class<T>) Object.class;
-    }
-
-    public CollectionDataType(Class<C> collectionType, String mimeType)
-    {
-        super(collectionType, mimeType);
-        checkCollectionTypeForNull(collectionType);
-        this.itmesType = (Class<T>) Object.class;
-    }
-
-    public CollectionDataType(Class<C> collectionType, Class<T> type, String mimeType)
-    {
-        super(collectionType, mimeType);
-        checkCollectionTypeForNull(collectionType);
-        this.itmesType = type;
-    }
-
-    public CollectionDataType(Class<C> collectionType, Class<T> type, String mimeType, String encoding)
+    CollectionDataType(Class<C> collectionType, Class<T> type, String mimeType, String encoding)
     {
         super(collectionType, mimeType, encoding);
-        checkCollectionTypeForNull(collectionType);
-        this.itmesType = type;
-    }
-
-    public CollectionDataType(Class<C> collectionType, Class<T> type)
-    {
-        super(collectionType);
-        checkCollectionTypeForNull(collectionType);
-        this.itmesType = type;
-    }
-
-    protected void checkCollectionTypeForNull(Class<C> collectionType)
-    {
-        checkNotNull(collectionType, "'collectionType' cannot be null.");
+        this.itemsType = type;
     }
 
     public Class<T> getItemType()
     {
-        return itmesType;
-    }
-
-    public static CollectionDataType createFromMethodReturn(Method m)
-    {
-        return createFromMethodReturn(m, null);
-    }
-
-    public static CollectionDataType createFromMethodReturn(Method m, String mimeType)
-    {
-        Class collType = GenericsUtils.getCollectionReturnType(m);
-
-        if (collType != null)
-        {
-            return new CollectionDataType(m.getReturnType(), collType, mimeType);
-        }
-        else
-        {
-            throw new IllegalArgumentException("Return type for method is not a generic type collection. " + m);
-        }
-    }
-
-    public static CollectionDataType createFromMethodParam(Method m, int paramIndex)
-    {
-        return createFromMethodParam(m, paramIndex, null);
-    }
-
-    public static CollectionDataType createFromMethodParam(Method m, int paramIndex, String mimeType)
-    {
-        Class collType = GenericsUtils.getCollectionParameterType(new MethodParameter(m, paramIndex));
-
-        if (collType != null)
-        {
-            return new CollectionDataType(m.getParameterTypes()[paramIndex], collType, mimeType);
-        }
-        else
-        {
-            throw new IllegalArgumentException("Parameter type (index: " + paramIndex + ") for method is not a generic type collection. " + m);
-        }
-    }
-
-    public static boolean isReturnTypeACollection(Method m)
-    {
-        return GenericsUtils.getCollectionReturnType(m) != null;
-    }
-
-    public static boolean isParamTypeACollection(Method m, int paramIndex)
-    {
-        return GenericsUtils.getCollectionParameterType(new MethodParameter(m, paramIndex)) != null;
+        return itemsType;
     }
 
     @Override
@@ -166,7 +74,7 @@ public class CollectionDataType<C extends Collection<T>, T> extends SimpleDataTy
             return false;
         }
 
-        if ((mimeType != null ? !mimeType.equals(that.mimeType) : that.mimeType != null) && !ANY_MIME_TYPE.equals(that.mimeType) && !ANY_MIME_TYPE.equals(this.mimeType))
+        if ((mimeType != null ? !mimeType.equals(that.mimeType) : that.mimeType != null) && !MimeTypes.ANY.equals(that.mimeType) && !MimeTypes.ANY.equals(this.mimeType))
         {
             return false;
         }

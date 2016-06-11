@@ -6,18 +6,17 @@
  */
 package org.mule.runtime.module.cxf;
 
+import org.mule.runtime.api.message.NullPayload;
+import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.core.NonBlockingVoidMuleEvent;
 import org.mule.runtime.core.VoidMuleEvent;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.config.MuleProperties;
-import org.mule.runtime.core.api.execution.ExecutionCallback;
-import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.core.component.ComponentException;
 import org.mule.runtime.core.config.ExceptionHelper;
 import org.mule.runtime.core.execution.ErrorHandlingExecutionTemplate;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -51,6 +50,7 @@ public class MuleInvoker implements Invoker
         this.targetClass = targetClass;
     }
 
+    @Override
     public Object invoke(Exchange exchange, Object o)
     {
         // this is the original request. Keep it to copy all the message properties from it
@@ -68,7 +68,7 @@ public class MuleInvoker implements Invoker
                 MuleMessage reqMsg = event.getMessage();
                 Object payload = extractPayload(exchange.getInMessage());
                 Class payloadClass = payload != null ? payload.getClass() : Object.class;
-                reqMsg.setPayload(payload, DataTypeFactory.create(payloadClass, cxfMmessageProcessor.getMimeType()));
+                reqMsg.setPayload(payload, DataType.builder(payloadClass).forMimeType(cxfMmessageProcessor.getMimeType()).build());
 
                 BindingOperationInfo bop = exchange.get(BindingOperationInfo.class);
                 Service svc = exchange.get(Service.class);
@@ -91,14 +91,7 @@ public class MuleInvoker implements Invoker
                 }
 
                 ErrorHandlingExecutionTemplate errorHandlingExecutionTemplate = ErrorHandlingExecutionTemplate.createErrorHandlingExecutionTemplate(event.getMuleContext(), event.getFlowConstruct().getExceptionListener());
-                responseEvent = errorHandlingExecutionTemplate.execute(new ExecutionCallback<MuleEvent>()
-                {
-                    @Override
-                    public MuleEvent process() throws Exception
-                    {
-                        return cxfMmessageProcessor.processNext(event);
-                    }
-                });
+                responseEvent = errorHandlingExecutionTemplate.execute(() -> cxfMmessageProcessor.processNext(event));
             }
             catch (MuleException e)
             {
@@ -233,10 +226,9 @@ public class MuleInvoker implements Invoker
      */
     private static Method matchMethod(Method methodToMatch, Class<?> targetClass) 
     {
-        Class<?>[] interfaces = targetClass.getInterfaces();
-        for (int i = 0; i < interfaces.length; i++) 
+        for (Class<?> iface : targetClass.getInterfaces())
         {
-            Method m = getMostSpecificMethod(methodToMatch, interfaces[i]);
+            Method m = getMostSpecificMethod(methodToMatch, iface);
             if (!methodToMatch.equals(m)) 
             {
                 return m;

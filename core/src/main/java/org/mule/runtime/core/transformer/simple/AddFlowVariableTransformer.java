@@ -6,8 +6,8 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
-import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.core.api.MuleEvent;
 
 public class AddFlowVariableTransformer extends AbstractAddVariablePropertyTransformer<Object>
 {

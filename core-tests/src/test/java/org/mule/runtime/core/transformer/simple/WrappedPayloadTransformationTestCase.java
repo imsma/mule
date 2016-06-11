@@ -6,12 +6,12 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.transformer.TransformerException;
 
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class WrappedPayloadTransformationTestCase extends HexStringByteArrayTransformersTestCase
 {

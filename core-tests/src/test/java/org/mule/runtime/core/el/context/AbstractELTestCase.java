@@ -8,16 +8,17 @@ package org.mule.runtime.core.el.context;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
+import org.mule.mvel2.ImmutableElementException;
+import org.mule.mvel2.PropertyAccessException;
+import org.mule.mvel2.optimizers.OptimizerFactory;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.el.ExpressionLanguage;
 import org.mule.runtime.core.api.expression.ExpressionRuntimeException;
 import org.mule.runtime.core.api.lifecycle.Initialisable;
 import org.mule.runtime.core.el.mvel.MVELExpressionLanguage;
-import org.mule.mvel2.ImmutableElementException;
-import org.mule.mvel2.PropertyAccessException;
-import org.mule.mvel2.optimizers.OptimizerFactory;
-import org.mule.tck.junit4.AbstractMuleContextTestCase;
 import org.mule.runtime.core.util.ExceptionUtils;
+import org.mule.tck.junit4.AbstractMuleContextTestCase;
 
 import java.util.Arrays;
 import java.util.List;

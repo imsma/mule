@@ -6,11 +6,11 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
+import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.transformer.AbstractMessageTransformer;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.util.AttributeEvaluator;
 
 import java.text.MessageFormat;
@@ -23,8 +23,8 @@ public class AddAttachmentTransformer extends AbstractMessageTransformer
 
     public AddAttachmentTransformer()
     {
-        registerSourceType(DataTypeFactory.OBJECT);
-        setReturnDataType(DataTypeFactory.OBJECT);
+        registerSourceType(DataType.OBJECT);
+        setReturnDataType(DataType.OBJECT);
     }
 
     @Override

@@ -6,13 +6,13 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
+import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.transformer.AbstractMessageTransformer;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.util.AttributeEvaluator;
 import org.mule.runtime.core.util.WildcardAttributeEvaluator;
 
@@ -25,8 +25,8 @@ public class CopyAttachmentsTransformer extends AbstractMessageTransformer
 
     public CopyAttachmentsTransformer()
     {
-        registerSourceType(DataTypeFactory.OBJECT);
-        setReturnDataType(DataTypeFactory.OBJECT);
+        registerSourceType(DataType.OBJECT);
+        setReturnDataType(DataType.OBJECT);
     }
 
     @Override
@@ -46,18 +46,14 @@ public class CopyAttachmentsTransformer extends AbstractMessageTransformer
             {
                 try
                 {
-                    wildcardAttachmentNameEvaluator.processValues(message.getInboundAttachmentNames(),new WildcardAttributeEvaluator.MatchCallback()
+                    wildcardAttachmentNameEvaluator.processValues(message.getInboundAttachmentNames(),matchedValue ->
                     {
-                        @Override
-                        public void processMatch(String matchedValue)
+                        try
                         {
-                            try
-                            {
-                                message.addOutboundAttachment(matchedValue,message.getInboundAttachment(matchedValue));
-                            } catch (Exception e)
-                            {
-                                throw new MuleRuntimeException(e);
-                            }
+                            message.addOutboundAttachment(matchedValue,message.getInboundAttachment(matchedValue));
+                        } catch (Exception e)
+                        {
+                            throw new MuleRuntimeException(e);
                         }
                     });
                 }

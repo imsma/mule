@@ -10,9 +10,9 @@ import org.mule.runtime.core.config.MuleManifest;
 
 import java.net.UnknownHostException;
 
-import junit.framework.Assert;
-
 import org.junit.Test;
+
+import junit.framework.Assert;
 
 public class MuleInstanceContextTestCase extends AbstractELTestCase
 {

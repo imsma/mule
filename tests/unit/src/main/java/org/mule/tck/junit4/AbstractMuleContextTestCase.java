@@ -35,7 +35,6 @@ import org.mule.runtime.core.context.DefaultMuleContextBuilder;
 import org.mule.runtime.core.context.DefaultMuleContextFactory;
 import org.mule.runtime.core.context.notification.MuleContextNotification;
 import org.mule.runtime.core.processor.strategy.NonBlockingProcessingStrategy;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.util.ClassUtils;
 import org.mule.runtime.core.util.FileUtils;
 import org.mule.runtime.core.util.StringUtils;
@@ -168,17 +167,15 @@ public abstract class AbstractMuleContextTestCase extends AbstractMuleTestCase
         final AtomicReference<Latch> contextStartedLatch = new AtomicReference<Latch>();
 
         contextStartedLatch.set(new Latch());
-        muleContext.registerListener(new MuleContextNotificationListener<MuleContextNotification>()
+        // Do not inline it, otherwise the type of the listener is lost
+        final MuleContextNotificationListener<MuleContextNotification> listener = notification ->
         {
-            @Override
-            public void onNotification(MuleContextNotification notification)
+            if (notification.getAction() == MuleContextNotification.CONTEXT_STARTED)
             {
-                if (notification.getAction() == MuleContextNotification.CONTEXT_STARTED)
-                {
-                    contextStartedLatch.get().countDown();
-                }
+                contextStartedLatch.get().countDown();
             }
-        });
+        };
+        muleContext.registerListener(listener);
 
         muleContext.start();
 
@@ -546,7 +543,7 @@ public abstract class AbstractMuleContextTestCase extends AbstractMuleTestCase
     @Deprecated
     protected String getPayloadAsString(MuleMessage message) throws Exception
     {
-        return getPayload(message, DataTypeFactory.STRING);
+        return getPayload(message, DataType.STRING);
     }
 
     /**
@@ -570,7 +567,7 @@ public abstract class AbstractMuleContextTestCase extends AbstractMuleTestCase
      */
     protected byte[] getPayloadAsBytes(MuleMessage message) throws Exception
     {
-        return getPayload(message, DataTypeFactory.BYTE_ARRAY);
+        return getPayload(message, DataType.BYTE_ARRAY);
     }
 
     /**
@@ -596,7 +593,7 @@ public abstract class AbstractMuleContextTestCase extends AbstractMuleTestCase
      */
     protected <T> T getPayload(MuleMessage message, Class<T> clazz) throws Exception
     {
-        return getPayload(message, DataTypeFactory.create(clazz));
+        return getPayload(message, DataType.builder(clazz).build());
     }
 
     protected MuleEvent getNonBlockingTestEventUsingFlow(Object payload, ReplyToHandler replyToHandler) throws Exception

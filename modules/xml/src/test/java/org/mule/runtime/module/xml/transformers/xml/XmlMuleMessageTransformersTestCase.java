@@ -6,11 +6,14 @@
  */
 package org.mule.runtime.module.xml.transformers.xml;
 
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.config.MuleProperties;
@@ -45,7 +48,7 @@ public class XmlMuleMessageTransformersTestCase extends AbstractMuleContextTestC
 
         Object result = t2.transform(xml);
         assertNotNull(result);
-        assertTrue(result instanceof MuleMessage);
+        assertThat(result, instanceOf(MuleMessage.class));
 
         msg = (MuleMessage) result;
 
@@ -79,6 +82,7 @@ public class XmlMuleMessageTransformersTestCase extends AbstractMuleContextTestC
 
         for (String key : outboundProps)
         {
+            System.out.println(key);
             assertTrue(key.equals("number") || key.equals("string") || key.equals("object"));
             assertFalse(key.equals("NUMBER") || key.equals("STRING") || key.equals("OBJECT"));
         }

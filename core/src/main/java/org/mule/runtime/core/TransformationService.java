@@ -9,6 +9,7 @@ package org.mule.runtime.core;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.mule.runtime.core.util.ClassUtils.isConsumable;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
@@ -20,8 +21,6 @@ import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.api.transformer.TransformerMessagingException;
 import org.mule.runtime.core.config.i18n.CoreMessages;
 import org.mule.runtime.core.transformer.TransformerUtils;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 
 import java.io.InputStream;
 import java.util.Arrays;
@@ -129,7 +128,7 @@ public class TransformationService
         {
             try
             {
-                return getPayload(message, DataType.STRING_DATA_TYPE, encoding);
+                return getPayload(message, DataType.STRING, encoding);
             }
             catch (TransformerException e)
             {
@@ -149,7 +148,7 @@ public class TransformationService
                 Transformer transformer = transformers.get(index);
 
                 Class<?> srcCls = result.getPayload().getClass();
-                DataType<?> originalSourceType = DataTypeFactory.create(srcCls);
+                DataType<?> originalSourceType = DataType.builder(srcCls).build();
 
                 if (transformer.isSourceDataTypeSupported(originalSourceType))
                 {
@@ -285,9 +284,10 @@ public class TransformationService
         String mimeType = transformed.getMimeType() == null || MimeTypes.ANY.equals(transformed.getMimeType()) ? original.getMimeType() : transformed.getMimeType();
         String encoding = transformed.getEncoding() == null ? message.getEncoding() : transformed.getEncoding();
         // In case if the transformed dataType is an Object type we could keep the original type if it is compatible/assignable (String->Object we want to keep String as transformed DataType)
-        Class<?> type = payloadTransformedClass != null && transformed.getType() == Object.class && original.isCompatibleWith(DataTypeFactory.create(payloadTransformedClass, mimeType)) ? original.getType() : transformed.getType();
+        Class<?> type = payloadTransformedClass != null && transformed.getType() == Object.class && original.isCompatibleWith(DataType.builder(payloadTransformedClass).forMimeType(mimeType).build())
+                ? original.getType() : transformed.getType();
 
-        return DataTypeFactory.create(type, mimeType, encoding);
+        return DataType.builder(type).forMimeType(mimeType).withEncoding(encoding).build();
     }
 
     /**
@@ -313,7 +313,7 @@ public class TransformationService
             throw new IllegalArgumentException(CoreMessages.objectIsNull("resultType").getMessage());
         }
 
-        DataType source = DataTypeFactory.createFromObject(message);
+        DataType source = DataType.createFromObject(message);
 
         // If no conversion is necessary, just return the payload as-is
         if (resultType.isCompatibleWith(source))

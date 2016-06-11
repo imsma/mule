@@ -17,8 +17,8 @@ import org.mule.compatibility.core.api.transport.MuleMessageFactory;
 import org.mule.compatibility.transport.file.FileConnector;
 import org.mule.compatibility.transport.file.FileMuleMessageFactory;
 import org.mule.compatibility.transport.file.ReceiverFileInputStream;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.api.MuleMessage;
-import org.mule.runtime.core.transformer.types.MimeTypes;
 
 import java.io.File;
 

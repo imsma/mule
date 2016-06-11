@@ -8,11 +8,11 @@ package org.mule.runtime.core.transformer.simple;
 
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.DataTypeBuilder;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.transformer.AbstractMessageTransformer;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.transformer.types.TypedValue;
 import org.mule.runtime.core.util.AttributeEvaluator;
 import org.mule.runtime.core.util.StringUtils;
@@ -26,8 +26,8 @@ public abstract class AbstractAddVariablePropertyTransformer<T> extends Abstract
 
     public AbstractAddVariablePropertyTransformer()
     {
-        registerSourceType(DataTypeFactory.OBJECT);
-        setReturnDataType(DataTypeFactory.OBJECT);
+        registerSourceType(DataType.OBJECT);
+        setReturnDataType(DataType.OBJECT);
     }
 
     @Override
@@ -63,10 +63,14 @@ public abstract class AbstractAddVariablePropertyTransformer<T> extends Abstract
             }
             else
             {
-                if (!StringUtils.isEmpty(returnType.getMimeType()) || !StringUtils.isEmpty(returnType.getEncoding()))
+                if (!StringUtils.isEmpty(returnType.getMimeType()))
                 {
-                    DataType<?> dataType = DataTypeFactory.create(typedValue.getValue().getClass(), getMimeType(), getEncoding());
-                    addProperty(event, key, typedValue.getValue(), dataType);
+                    DataTypeBuilder<?> builder = DataType.builder(typedValue.getValue().getClass()).forMimeType(getMimeType());
+                    if (!StringUtils.isEmpty(returnType.getEncoding()))
+                    {
+                        builder = builder.withEncoding(getEncoding());
+                    }
+                    addProperty(event, key, typedValue.getValue(), builder.build());
                 }
                 else
                 {

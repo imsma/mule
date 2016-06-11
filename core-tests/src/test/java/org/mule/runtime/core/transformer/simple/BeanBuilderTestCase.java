@@ -12,8 +12,8 @@ import org.mule.runtime.core.expression.ExpressionConfig;
 import org.mule.runtime.core.expression.transformers.BeanBuilderTransformer;
 import org.mule.runtime.core.expression.transformers.ExpressionArgument;
 import org.mule.runtime.core.object.PrototypeObjectFactory;
-import org.mule.tck.testmodels.fruit.Orange;
 import org.mule.runtime.core.transformer.AbstractTransformerTestCase;
+import org.mule.tck.testmodels.fruit.Orange;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -10,8 +10,8 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+
 import org.mule.runtime.api.metadata.DataType;
-import org.mule.runtime.api.metadata.SimpleDataType;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleMessage;
@@ -33,9 +33,7 @@ import org.mockito.Answers;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
 @SmallTest
 @RunWith(MockitoJUnitRunner.class)
@@ -43,7 +41,7 @@ public class CopyPropertiesTransformerTestCase extends AbstractMuleTestCase
 {
     public static final String ENCODING = "encoding";
     public static final String INBOUND_PROPERTY_KEY = "propKey";
-    public static final DataType PROPERTY_DATA_TYPE = DataType.STRING_DATA_TYPE;
+    public static final DataType PROPERTY_DATA_TYPE = DataType.STRING;
     private static final Serializable PROPERTY_VALUE = StringUtils.EMPTY;
 
     @Mock
@@ -58,16 +56,8 @@ public class CopyPropertiesTransformerTestCase extends AbstractMuleTestCase
     {
         when(mockMuleContext.getExpressionManager()).thenReturn(mockExpressionManager);
         Mockito.when(mockExpressionManager.parse(anyString(), Mockito.any(MuleEvent.class))).thenAnswer(
-                new Answer<String>()
-                {
-                    @Override
-                    public String answer(InvocationOnMock invocation) throws Throwable
-                    {
-
-                        return (String) invocation.getArguments()[0];
-                    }
-                });
-        when(mockMuleMessage.getDataType()).thenReturn(new SimpleDataType(String.class));
+                invocation -> (String) invocation.getArguments()[0]);
+        when(mockMuleMessage.getDataType()).thenReturn(PROPERTY_DATA_TYPE);
     }
 
     @Test

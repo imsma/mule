@@ -6,16 +6,16 @@
  */
 package org.mule.runtime.module.xml.transformer;
 
+import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.lifecycle.Initialisable;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.config.i18n.MessageFactory;
 import org.mule.runtime.core.message.OutputHandler;
-import org.mule.runtime.module.xml.util.XMLUtils;
 import org.mule.runtime.core.transformer.AbstractMessageTransformer;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
-import org.mule.runtime.core.transformer.types.MimeTypes;
+import org.mule.runtime.module.xml.util.XMLUtils;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,19 +51,19 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
     
     public AbstractXmlTransformer()
     {
-        registerSourceType(DataTypeFactory.STRING);
-        registerSourceType(DataTypeFactory.BYTE_ARRAY);
-        registerSourceType(DataTypeFactory.create(javax.xml.transform.Source.class));
-        registerSourceType(DataTypeFactory.create(org.xml.sax.InputSource.class));
-        registerSourceType(DataTypeFactory.create(org.dom4j.Node.class));
-        registerSourceType(DataTypeFactory.create(org.dom4j.Document.class));
-        registerSourceType(DataTypeFactory.create(org.w3c.dom.Document.class));
-        registerSourceType(DataTypeFactory.create(org.w3c.dom.Element.class));
-        registerSourceType(DataTypeFactory.create(java.io.InputStream.class));
-        registerSourceType(DataTypeFactory.create(OutputHandler.class));
-        registerSourceType(DataTypeFactory.create(javax.xml.stream.XMLStreamReader.class));
-        registerSourceType(DataTypeFactory.create(org.mule.runtime.module.xml.transformer.DelayedResult.class));
-        setReturnDataType(DataTypeFactory.create(byte[].class, MimeTypes.XML));
+        registerSourceType(DataType.STRING);
+        registerSourceType(DataType.BYTE_ARRAY);
+        registerSourceType(DataType.builder(javax.xml.transform.Source.class).build());
+        registerSourceType(DataType.builder(org.xml.sax.InputSource.class).build());
+        registerSourceType(DataType.builder(org.dom4j.Node.class).build());
+        registerSourceType(DataType.builder(org.dom4j.Document.class).build());
+        registerSourceType(DataType.builder(org.w3c.dom.Document.class).build());
+        registerSourceType(DataType.builder(org.w3c.dom.Element.class).build());
+        registerSourceType(DataType.INPUT_STREAM);
+        registerSourceType(DataType.builder(OutputHandler.class).build());
+        registerSourceType(DataType.builder(javax.xml.stream.XMLStreamReader.class).build());
+        registerSourceType(DataType.builder(org.mule.runtime.module.xml.transformer.DelayedResult.class).build());
+        setReturnDataType(DataType.builder(byte[].class).forMimeType(MimeTypes.XML).build());
     }
 
     @Override
@@ -118,11 +118,13 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
                 ByteArrayOutputStream resultStream = new ByteArrayOutputStream();
                 StreamResult result = new StreamResult(resultStream);
 
+                @Override
                 public Result getResult()
                 {
                     return result;
                 }
 
+                @Override
                 public Object getResultObject()
                 {
                     return resultStream.toByteArray();
@@ -136,11 +138,13 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
                 StringWriter writer = new StringWriter();
                 StreamResult result = new StreamResult(writer);
 
+                @Override
                 public Result getResult()
                 {
                     return result;
                 }
 
+                @Override
                 public Object getResultObject()
                 {
                     return writer.getBuffer().toString();
@@ -162,11 +166,13 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
 
             return new ResultHolder()
             {
+                @Override
                 public Result getResult()
                 {
                     return result;
                 }
 
+                @Override
                 public Object getResultObject()
                 {
                     return result.getNode();
@@ -179,11 +185,13 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
             {
                 DocumentResult result = new DocumentResult();
 
+                @Override
                 public Result getResult()
                 {
                     return result;
                 }
 
+                @Override
                 public Object getResultObject()
                 {
                     return result;
@@ -196,11 +204,13 @@ public abstract class AbstractXmlTransformer extends AbstractMessageTransformer 
             {
                 DocumentResult result = new DocumentResult();
 
+                @Override
                 public Result getResult()
                 {
                     return result;
                 }
 
+                @Override
                 public Object getResultObject()
                 {
                     return result.getDocument();

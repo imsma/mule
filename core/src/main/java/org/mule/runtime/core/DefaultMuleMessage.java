@@ -17,11 +17,10 @@ import static org.mule.runtime.core.api.config.MuleProperties.MULE_CORRELATION_S
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_ENCODING_PROPERTY;
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_REPLY_TO_PROPERTY;
 import static org.mule.runtime.core.api.config.MuleProperties.SYSTEM_PROPERTY_PREFIX;
-import static org.mule.runtime.core.transformer.types.DataTypeFactory.createFromDataType;
-import static org.mule.runtime.core.transformer.types.DataTypeFactory.createFromDataTypeWithMimeType;
 import static org.mule.runtime.core.util.SystemUtils.getDefaultEncoding;
 import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.DataTypeBuilder;
 import org.mule.runtime.core.api.ExceptionPayload;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleException;
@@ -34,7 +33,6 @@ import org.mule.runtime.core.config.i18n.CoreMessages;
 import org.mule.runtime.core.message.ds.ByteArrayDataSource;
 import org.mule.runtime.core.message.ds.InputStreamDataSource;
 import org.mule.runtime.core.message.ds.StringDataSource;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.core.transformer.types.TypedValue;
 import org.mule.runtime.core.util.ClassUtils;
 import org.mule.runtime.core.util.ObjectUtils;
@@ -127,22 +125,14 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
         else
         {
             // TODO MULE-9855: Make MuleMessage immutable
-            DataType<?> dataType = DataTypeFactory.create(payload.getClass(),
-                    previous.getDataType().getMimeType(),
-                    previous.getDataType().getEncoding());
-
-            return dataType;
+            return DataType.builder().fromDataType(previous.getDataType()).forType(payload.getClass()).build();
         }
     }
 
     private static DataType<?> getCloningMessageDataType(MuleMessage previous)
     {
         // TODO MULE-9855: Make MuleMessage immutable
-        DataType<?> dataType = DataTypeFactory.create(previous.getDataType().getType(),
-                previous.getDataType().getMimeType(),
-                previous.getDataType().getEncoding());
-
-        return dataType;
+        return DataType.builder().fromDataType(previous.getDataType()).build();
     }
 
     /**
@@ -391,9 +381,7 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
     private static DataType<?> createDefaultDataType(Object payload, MuleContext muleContext)
     {
         Class<?> type = payload == null ? Object.class : payload.getClass();
-        DataType<?> dataType = DataTypeFactory.create(type, null, getDefaultEncoding(muleContext));
-
-        return dataType;
+        return DataType.builder(type).withEncoding(getDefaultEncoding(muleContext)).build();
     }
 
     public void setMuleContext(MuleContext context)
@@ -775,7 +763,7 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
     public void setEncoding(String encoding)
     {
         assertAccess(WRITE);
-        setDataType(createFromDataType(getDataType(), encoding));
+        setDataType(DataType.builder().fromDataType(getDataType()).withEncoding(encoding).build());
     }
 
     /**
@@ -785,7 +773,7 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
     public void setMimeType(String mimeType)
     {
         assertAccess(WRITE);
-        setDataType(createFromDataType(getDataType(), mimeType, getDataType().getEncoding()));
+        setDataType(DataType.builder().fromDataType(getDataType()).forMimeType(mimeType).withEncoding(getDataType().getEncoding()).build());
     }
 
     /**
@@ -813,14 +801,14 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
     @Override
     public synchronized void setPayload(Object payload)
     {
-        DataType newDataType;
+        DataType<?> newDataType;
         if (payload == null || payload instanceof NullPayload)
         {
-            newDataType = DataTypeFactory.create(Object.class, null);
+            newDataType = DataType.OBJECT;
         }
         else
         {
-            newDataType = DataTypeFactory.create(payload.getClass(), null);
+            newDataType = DataType.builder(payload.getClass()).build();
         }
 
         setPayload(payload, newDataType);
@@ -1012,11 +1000,11 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
                 {
                     try
                     {
-                        DataType source = DataTypeFactory.createFromObject(theContent);
-                        Transformer transformer = muleContext.getRegistry().lookupTransformer(source, DataType.BYTE_ARRAY_DATA_TYPE);
+                        DataType source = DataType.createFromObject(theContent);
+                        Transformer transformer = muleContext.getRegistry().lookupTransformer(source, DataType.BYTE_ARRAY);
                         if (transformer == null)
                         {
-                            throw new TransformerException(CoreMessages.noTransformerFoundForMessage(source, DataType.BYTE_ARRAY_DATA_TYPE));
+                            throw new TransformerException(CoreMessages.noTransformerFoundForMessage(source, DataType.BYTE_ARRAY));
                         }
                         contents = transformer.transform(theContent);
                     }
@@ -1082,8 +1070,7 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
         else
         {
             out.writeBoolean(false);
-            byte[] valueAsByteArray = (byte[]) muleContext.getTransformationService().transform(this, DataTypeFactory
-                    .BYTE_ARRAY).getPayload();
+            byte[] valueAsByteArray = (byte[]) muleContext.getTransformationService().transform(this, DataType.BYTE_ARRAY).getPayload();
             out.writeInt(valueAsByteArray.length);
             new DataOutputStream(out).write(valueAsByteArray);
         }
@@ -1436,16 +1423,18 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
 
     private void updateDataTypeWithProperty(String key, Object value)
     {
+        final DataTypeBuilder builder = DataType.builder().fromDataType(getDataType());
+
         // updates dataType when encoding is updated using a property instead of using #setEncoding
         if (MULE_ENCODING_PROPERTY.equals(key))
         {
-            setDataType(createFromDataType(getDataType(), (String) value));
+            builder.withEncoding((String) value);
         }
         else if (CONTENT_TYPE_PROPERTY.equalsIgnoreCase(key))
         {
             try
             {
-                setDataType(createFromDataTypeWithMimeType(getDataType(), (String) value));
+                builder.forMimeType((String) value);
             }
             catch (IllegalArgumentException e)
             {
@@ -1458,9 +1447,11 @@ public class DefaultMuleMessage extends TypedValue<Object> implements MuleMessag
                     String encoding = defaultCharset().name();
                     logger.warn(format("%s when parsing Content-Type '%s': %s", e.getClass().getName(), value, e.getMessage()));
                     logger.warn(format("Using defualt encoding: %s", encoding));
-                    setDataType(createFromDataType(getDataType(), encoding));
+                    builder.withEncoding(encoding);
                 }
             }
         }
+
+        setDataType(builder.build());
     }
 }

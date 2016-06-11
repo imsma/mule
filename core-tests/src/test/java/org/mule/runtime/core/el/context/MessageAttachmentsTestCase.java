@@ -11,6 +11,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleMessage;
@@ -22,10 +23,11 @@ import java.util.Set;
 
 import javax.activation.DataHandler;
 
-import junit.framework.Assert;
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
 import org.junit.Before;
 import org.junit.Test;
+
+import junit.framework.Assert;
 
 public class MessageAttachmentsTestCase extends AbstractELTestCase
 {

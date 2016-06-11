@@ -12,8 +12,9 @@ import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
-import org.mule.runtime.core.api.MuleEvent;
+
 import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.core.api.MuleEvent;
 import org.mule.tck.size.SmallTest;
 
 import org.mockito.ArgumentCaptor;

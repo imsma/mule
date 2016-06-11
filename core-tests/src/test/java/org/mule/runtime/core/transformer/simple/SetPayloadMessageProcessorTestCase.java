@@ -16,24 +16,23 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mule.runtime.api.message.NullPayload;
+import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.api.metadata.MimeTypes;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleMessage;
 import org.mule.runtime.core.api.expression.ExpressionManager;
-import org.mule.runtime.api.metadata.DataType;
+import org.mule.runtime.core.transformer.types.TypedValue;
 import org.mule.tck.junit4.AbstractMuleTestCase;
 import org.mule.tck.junit4.matcher.DataTypeMatcher;
-import org.mule.runtime.core.transformer.types.MimeTypes;
-import org.mule.runtime.core.transformer.types.TypedValue;
-import org.mule.runtime.api.message.NullPayload;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 public class SetPayloadMessageProcessorTestCase extends AbstractMuleTestCase
 {
@@ -61,15 +60,7 @@ public class SetPayloadMessageProcessorTestCase extends AbstractMuleTestCase
 
         when(muleContext.getExpressionManager()).thenReturn(expressionManager);
         when(expressionManager.parse(anyString(), any(MuleEvent.class))).thenAnswer(
-                new Answer<String>()
-                {
-                    @Override
-                    public String answer(InvocationOnMock invocation) throws Throwable
-                    {
-
-                        return (String) invocation.getArguments()[0];
-                    }
-                });
+                invocation -> (String) invocation.getArguments()[0]);
 
         muleEvent = mock(MuleEvent.class);
         when(muleEvent.getMessage()).thenReturn(muleMessage);
@@ -120,7 +111,7 @@ public class SetPayloadMessageProcessorTestCase extends AbstractMuleTestCase
         setPayloadMessageProcessor.setValue(EXPRESSION);
         when(expressionManager.isExpression(EXPRESSION)).thenReturn(true);
         setPayloadMessageProcessor.initialise();
-        TypedValue typedValue = new TypedValue(PLAIN_TEXT, DataType.STRING_DATA_TYPE);
+        TypedValue typedValue = new TypedValue(PLAIN_TEXT, DataType.STRING);
         when(expressionManager.evaluateTyped(EXPRESSION, muleEvent)).thenReturn(typedValue);
 
 

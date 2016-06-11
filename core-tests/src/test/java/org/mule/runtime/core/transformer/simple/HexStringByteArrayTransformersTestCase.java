@@ -6,6 +6,8 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import org.mule.runtime.core.api.transformer.Transformer;
 import org.mule.runtime.core.api.transformer.TransformerException;
 import org.mule.runtime.core.transformer.AbstractTransformerTestCase;
@@ -15,8 +17,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class HexStringByteArrayTransformersTestCase extends AbstractTransformerTestCase
 {

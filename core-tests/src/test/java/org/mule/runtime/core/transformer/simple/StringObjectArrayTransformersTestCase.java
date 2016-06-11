@@ -6,10 +6,10 @@
  */
 package org.mule.runtime.core.transformer.simple;
 
+import static org.junit.Assert.assertEquals;
+
 import org.mule.runtime.core.api.transformer.Transformer;
 import org.mule.runtime.core.transformer.AbstractTransformerTestCase;
-
-import static org.junit.Assert.assertEquals;
 
 public class StringObjectArrayTransformersTestCase extends AbstractTransformerTestCase
 {

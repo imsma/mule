@@ -14,7 +14,6 @@ import org.mule.runtime.api.message.NullPayload;
 import org.mule.runtime.api.metadata.DataType;
 import org.mule.runtime.core.DefaultMuleMessage;
 import org.mule.runtime.core.api.MuleContext;
-import org.mule.runtime.core.transformer.types.DataTypeFactory;
 import org.mule.runtime.module.extension.internal.runtime.OperationContextAdapter;
 
 import java.io.Serializable;
@@ -84,6 +83,6 @@ abstract class AbstractReturnDelegate implements ReturnDelegate
             return null;
         }
 
-        return DataTypeFactory.create(value.getClass(), mimeType, encoding);
+        return DataType.builder(value.getClass()).forMimeType(mimeType).withEncoding(encoding).build();
     }
 }
