@@ -180,7 +180,6 @@ public class ApplicationModel
         convertConfigFileToComponentModel(applicationConfig);
         validateModel();
         createEffectiveModel();
-        System.out.println("effective  model");
     }
 
     private void createEffectiveModel()

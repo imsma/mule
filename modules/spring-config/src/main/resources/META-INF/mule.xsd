@@ -161,7 +161,7 @@
                                 <xsd:element name="parameter" minOccurs="1" maxOccurs="unbounded">
                                     <xsd:complexType>
                                         <xsd:attribute name="parameterName"/>
-                                        <!--<xsd:attribute name="value"/>-->
+                                        <xsd:attribute name="defaultValue" use="optional"/>
                                     </xsd:complexType>
                                 </xsd:element>
                             </xsd:sequence>

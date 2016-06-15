@@ -8,7 +8,7 @@
     <operation name="operation">
         <parameters>
             <parameter parameterName="in1"/>
-            <parameter parameterName="in2"/>
+            <parameter parameterName="in2" defaultValue="testVarDefault"/>
         </parameters>
         <body>
             <set-payload value="$[in1]"/>
@@ -27,6 +27,12 @@
         <operation-ref operation="operation" >
             <parameter parameterName="in1" value="hola amigoooooo2"/>
             <parameter parameterName="in2" value="testVarValue2"/>
+        </operation-ref>
+    </flow>
+
+    <flow name="flow3">
+        <operation-ref operation="operation" >
+            <parameter parameterName="in1" value="hola amigoooooo3"/>
         </operation-ref>
     </flow>
 

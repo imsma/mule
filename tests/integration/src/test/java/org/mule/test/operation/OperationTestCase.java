@@ -33,5 +33,9 @@ public class OperationTestCase extends FunctionalTestCase
         muleEvent = flowRunner("flow2").run();
         assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo2"));
         assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarValue2"));
+
+        muleEvent = flowRunner("flow3").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo3"));
+        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarDefault"));
     }
 }
