@@ -12,14 +12,15 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ge
 import org.mule.runtime.config.spring.dsl.api.TypeConverter;
 import org.mule.runtime.config.spring.dsl.model.ComponentModel;
 import org.mule.runtime.config.spring.dsl.processor.ObjectTypeVisitor;
+import org.mule.runtime.config.spring.factories.ConstantFactoryBean;
 
 import java.util.Optional;
 
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 
 /**
  * Bean definition creator for elements that end up representing simple types.
- *
+ * <p>
  * <p>
  * Elements that represent a simple type always have the form
  * <pre>
@@ -44,8 +45,18 @@ public class SimpleTypeBeanDefinitionCreator extends BeanDefinitionCreator
             final String value = componentModel.getParameters().get(SIMPLE_TYPE_VALUE_PARAMETER_NAME);
             Optional<TypeConverter> typeConverterOptional = createBeanDefinitionRequest.getComponentBuildingDefinition().getTypeConverter();
             Object convertedValue = typeConverterOptional.map(converter -> converter.convert(value)).orElse(value);
-            AbstractBeanDefinition beanDefinition = genericBeanDefinition(type).addConstructorArgValue(convertedValue).getBeanDefinition();
-            componentModel.setBeanDefinition(beanDefinition);
+
+            BeanDefinitionBuilder beanDefinitionBuilder;
+            if (convertedValue != null && !isSimpleType(convertedValue.getClass()))
+            {
+                beanDefinitionBuilder = genericBeanDefinition(ConstantFactoryBean.class).addConstructorArgValue(convertedValue);
+            }
+            else
+            {
+                beanDefinitionBuilder = genericBeanDefinition(type).addConstructorArgValue(convertedValue);
+            }
+
+            componentModel.setBeanDefinition(beanDefinitionBuilder.getBeanDefinition());
             return true;
         }
         return false;

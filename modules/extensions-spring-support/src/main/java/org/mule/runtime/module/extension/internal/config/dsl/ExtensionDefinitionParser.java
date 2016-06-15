@@ -11,7 +11,6 @@ import static org.mule.metadata.java.utils.JavaTypeUtils.getGenericTypeAt;
 import static org.mule.metadata.java.utils.JavaTypeUtils.getType;
 import static org.mule.metadata.utils.MetadataTypeUtils.getDefaultValue;
 import static org.mule.metadata.utils.MetadataTypeUtils.getSingleAnnotation;
-import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildCollectionConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromMultipleDefinitions;
@@ -23,6 +22,7 @@ import static org.mule.runtime.extension.api.introspection.declaration.type.Type
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.LITERAL;
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.NOT_SUPPORTED;
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.REQUIRED;
+import static org.mule.runtime.module.extension.internal.util.IntrospectionUtils.getMemberName;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.singularize;
 import org.mule.metadata.api.ClassTypeLoader;
@@ -121,13 +121,19 @@ public abstract class ExtensionDefinitionParser
                 @Override
                 protected void defaultVisit(MetadataType metadataType)
                 {
-                    parseAttributeParameter(parameterName, metadataType, parameter.getDefaultValue(), parameter.getExpressionSupport(), parameter.isRequired());
+                    parseAttributeParameter(parameter);
                 }
 
                 @Override
                 public void visitObject(ObjectType objectType)
                 {
-                    parsePojoParameter(parameterName, objectType, parameter.getDefaultValue(), parameter.getExpressionSupport(), parameter.isRequired());
+                    if (isExpressionFunction(objectType))
+                    {
+                        defaultVisit(objectType);
+                        return;
+                    }
+
+                    parsePojoParameter(parameter);
                 }
 
                 @Override
@@ -147,7 +153,7 @@ public abstract class ExtensionDefinitionParser
 
     private void parseCollectionParameter(ParameterModel parameter, ArrayType arrayType)
     {
-        parseAttributeParameter(parameter.getName(), parameter.getType(), parameter.getDefaultValue(), parameter.getExpressionSupport(), parameter.isRequired());
+        parseAttributeParameter(parameter);
 
         Class<? extends Iterable> collectionType = getType(arrayType);
 
@@ -161,13 +167,13 @@ public abstract class ExtensionDefinitionParser
         }
 
         final String collectionElementName = hyphenize(parameter.getName());
-        addParameter(parameter.getName(), fromChildCollectionConfiguration(collectionType).withWrapperIdentifier(collectionElementName));
+        addParameter(parameter.getName(), fromChildConfiguration(collectionType).withWrapperIdentifier(collectionElementName));
         addDefinition(baseDefinitionBuilder.copy()
                               .withIdentifier(collectionElementName)
                               .withTypeDefinition(fromType(collectionType))
                               .build());
 
-        Builder itemDefinitionBuilder = baseDefinitionBuilder.copy().withIdentifier(singularize(parameter.getName()));
+        Builder itemDefinitionBuilder = baseDefinitionBuilder.copy().withIdentifier(hyphenize(singularize(parameter.getName())));
 
         arrayType.getType().accept(new BasicTypeMetadataVisitor()
         {
@@ -285,17 +291,37 @@ public abstract class ExtensionDefinitionParser
         return value instanceof String && parser.isContainsTemplate((String) value);
     }
 
-    protected AttributeDefinition.Builder parseAttributeParameter(String name, MetadataType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
+    protected AttributeDefinition.Builder parseAttributeParameter(ParameterModel parameterModel)
+    {
+        return parseAttributeParameter(getMemberName(parameterModel, parameterModel.getName()),
+                                       parameterModel.getName(),
+                                       parameterModel.getType(),
+                                       parameterModel.getDefaultValue(),
+                                       parameterModel.getExpressionSupport(),
+                                       parameterModel.isRequired());
+    }
+
+    protected AttributeDefinition.Builder parseAttributeParameter(String key, String name, MetadataType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
     {
         AttributeDefinition.Builder definitionBuilder = fromSimpleParameter(name, value -> resolverOf(name, type, value, defaultValue, expressionSupport, required));
-        addParameter(name, definitionBuilder);
+        addParameter(key, definitionBuilder);
 
         return definitionBuilder;
     }
 
-    protected void parsePojoParameter(String name, ObjectType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
+    protected void parsePojoParameter(ParameterModel parameterModel)
     {
-        parseAttributeParameter(name, type, defaultValue, expressionSupport, required);
+        parsePojoParameter(getMemberName(parameterModel, parameterModel.getName()),
+                           parameterModel.getName(),
+                           (ObjectType) parameterModel.getType(),
+                           parameterModel.getDefaultValue(),
+                           parameterModel.getExpressionSupport(),
+                           parameterModel.isRequired());
+    }
+
+    protected void parsePojoParameter(String key, String name, ObjectType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
+    {
+        parseAttributeParameter(key, name, type, defaultValue, expressionSupport, required);
         addParameter(name, fromChildConfiguration(ValueResolver.class).withWrapperIdentifier(hyphenize(name)));
         for (ObjectFieldType field : type.getFields())
         {

@@ -53,13 +53,13 @@ final class TopLevelParameterParser extends ExtensionDefinitionParser
                 @Override
                 protected void defaultVisit(MetadataType metadataType)
                 {
-                    parseAttributeParameter(parameterName, metadataType, defaultValue, expressionSupport, false);
+                    parseAttributeParameter(parameterName, parameterName, metadataType, defaultValue, expressionSupport, false);
                 }
 
                 @Override
                 public void visitObject(ObjectType objectType)
                 {
-                    parsePojoParameter(parameterName, objectType, defaultValue, expressionSupport, false);
+                    parsePojoParameter(parameterName, parameterName, objectType, defaultValue, expressionSupport, false);
                 }
             });
         }

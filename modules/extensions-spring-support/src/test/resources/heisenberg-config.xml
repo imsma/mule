@@ -27,10 +27,10 @@
                        weaponTypeFunction="#[weaponType]"
                        monthlyIncomes="monthlyIncomes"
                        literalExpressionWithoutDefault="#[money]">
-        <!--<heisenberg:enemies>-->
-            <!--<heisenberg:enemy value="Gustavo Fring"/>-->
-            <!--<heisenberg:enemy value="Hank"/>-->
-        <!--</heisenberg:enemies>-->
+        <heisenberg:enemies>
+            <heisenberg:enemy value="Gustavo Fring"/>
+            <heisenberg:enemy value="Hank"/>
+        </heisenberg:enemies>
         <heisenberg:next-door>
             <heisenberg:door address="pollos hermanos" victim="Gustavo Fring">
                 <heisenberg:previous>
@@ -74,10 +74,10 @@
             <!--<heisenberg:recipe key="pseudoephedrine" value="0"/>-->
             <!--<heisenberg:recipe key="P2P" value="25"/>-->
         <!--</heisenberg:recipes>-->
-        <!--<heisenberg:monthly-incomes>-->
-            <!--<heisenberg:monthly-income value="12000"/>-->
-            <!--<heisenberg:monthly-income value="500"/>-->
-        <!--</heisenberg:monthly-incomes>-->
+        <heisenberg:monthly-incomes>
+            <heisenberg:monthly-income value="12000"/>
+            <heisenberg:monthly-income value="500"/>
+        </heisenberg:monthly-incomes>
     </heisenberg:config>
 
     <heisenberg:config name="heisenbergWithPlaceHolders"
