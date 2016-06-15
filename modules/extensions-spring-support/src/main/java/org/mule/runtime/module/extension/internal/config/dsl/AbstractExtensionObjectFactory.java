@@ -6,16 +6,18 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl;
 
+import static com.google.common.collect.ImmutableList.copyOf;
 import org.mule.runtime.config.spring.dsl.api.ObjectFactory;
 import org.mule.runtime.module.extension.internal.runtime.resolver.CollectionValueResolver;
+import org.mule.runtime.module.extension.internal.runtime.resolver.MapValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 
-import com.google.common.collect.ImmutableList;
-
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory<T>
@@ -36,9 +38,7 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
     protected ResolverSet getParametersAsResolverSet()
     {
         ResolverSet resolverSet = new ResolverSet();
-        getParameters().forEach((key, value) -> {
-            resolverSet.add(key, toValueResolver(value));
-        });
+        getParameters().forEach((key, value) -> resolverSet.add(key, toValueResolver(value)));
 
         return resolverSet;
     }
@@ -52,7 +52,18 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
         }
         else if (value instanceof Collection)
         {
-            resolver = CollectionValueResolver.of((Class<? extends Collection>) value.getClass(), ImmutableList.copyOf((Iterable) value));
+            resolver = CollectionValueResolver.of((Class<? extends Collection>) value.getClass(), copyOf((Iterable) value));
+        }
+        else if (value instanceof Map)
+        {
+            Map<Object, Object> map = (Map<Object, Object>) value;
+            List<ValueResolver<Object>> keys = new ArrayList<>(map.size());
+            List<ValueResolver<Object>> values = new ArrayList<>(map.size());
+            map.forEach((key, entryValue) -> {
+                keys.add((ValueResolver<Object>) toValueResolver(key));
+                values.add((ValueResolver<Object>) toValueResolver(entryValue));
+            });
+            resolver = MapValueResolver.of(map.getClass(), keys, values);
         }
         else
         {

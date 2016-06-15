@@ -12,10 +12,12 @@ import static org.mule.metadata.java.utils.JavaTypeUtils.getType;
 import static org.mule.metadata.utils.MetadataTypeUtils.getDefaultValue;
 import static org.mule.metadata.utils.MetadataTypeUtils.getSingleAnnotation;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
+import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildMapConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromMultipleDefinitions;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
 import static org.mule.runtime.config.spring.dsl.api.KeyAttributeDefinitionPair.newBuilder;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromMapEntryType;
 import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.core.config.i18n.MessageFactory.createStaticMessage;
 import static org.mule.runtime.extension.api.introspection.declaration.type.TypeUtils.getExpressionSupport;
@@ -24,6 +26,7 @@ import static org.mule.runtime.extension.api.introspection.parameter.ExpressionS
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.REQUIRED;
 import static org.mule.runtime.module.extension.internal.util.IntrospectionUtils.getMemberName;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
+import static org.mule.runtime.module.extension.internal.util.NameUtils.pluralize;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.singularize;
 import org.mule.metadata.api.ClassTypeLoader;
 import org.mule.metadata.api.model.ArrayType;
@@ -66,6 +69,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.springframework.core.convert.ConversionService;
@@ -114,8 +119,6 @@ public abstract class ExtensionDefinitionParser
     protected void parseParameters(List<ParameterModel> parameters)
     {
         parameters.forEach(parameter -> {
-            final String parameterName = parameter.getName();
-
             parameter.getType().accept(new MetadataTypeVisitor()
             {
                 @Override
@@ -139,7 +142,7 @@ public abstract class ExtensionDefinitionParser
                 @Override
                 public void visitDictionary(DictionaryType dictionaryType)
                 {
-                    // TODO
+                    parseMapParameters(parameter, dictionaryType);
                 }
 
                 @Override
@@ -148,6 +151,84 @@ public abstract class ExtensionDefinitionParser
                     parseCollectionParameter(parameter, arrayType);
                 }
             });
+        });
+    }
+
+    private void parseMapParameters(ParameterModel parameter, DictionaryType dictionaryType)
+    {
+        parseAttributeParameter(parameter);
+
+        Class<? extends Map> mapType = getType(dictionaryType);
+        if (ConcurrentMap.class.equals(mapType))
+        {
+            mapType = ConcurrentHashMap.class;
+        }
+        else if (Map.class.equals(mapType))
+        {
+            mapType = HashMap.class;
+        }
+
+        final MetadataType keyType = dictionaryType.getKeyType();
+        final MetadataType valueType = dictionaryType.getValueType();
+        final Class<?> keyClass = getType(keyType);
+        final Class<?> valueClass = getType(valueType);
+        final String parameterName = parameter.getName();
+        final String mapElementName = hyphenize(pluralize(parameterName));
+
+        addParameter(parameterName, fromChildMapConfiguration(keyClass, valueClass)
+                .withWrapperIdentifier(mapElementName)
+                .withDefaultValue(parameter.getDefaultValue()));
+
+        addDefinition(baseDefinitionBuilder.copy()
+                              .withIdentifier(mapElementName)
+                              .withTypeDefinition(fromType(mapType))
+                              .build());
+
+        String entryElementName = hyphenize(singularize(parameterName));
+
+        valueType.accept(new MetadataTypeVisitor()
+        {
+
+            @Override
+            protected void defaultVisit(MetadataType metadataType)
+            {
+                addDefinition(baseDefinitionBuilder.copy()
+                                      .withIdentifier(entryElementName)
+                                      .withTypeDefinition(fromMapEntryType(keyClass, valueClass))
+                                      .withKeyTypeConverter(value -> resolverOf(parameterName, keyType, value, null, parameter.getExpressionSupport(), true))
+                                      .withTypeConverter(value -> resolverOf(parameterName, valueType, value, null, parameter.getExpressionSupport(), true))
+                                      .build());
+            }
+
+            @Override
+            public void visitArrayType(ArrayType arrayType)
+            {
+                defaultVisit(arrayType);
+                final String itemElementName = entryElementName + "-item";
+                arrayType.getType().accept(new BasicTypeMetadataVisitor()
+                {
+                    @Override
+                    protected void visitBasicType(MetadataType metadataType)
+                    {
+                        addDefinition(baseDefinitionBuilder.copy()
+                                              .withIdentifier(itemElementName)
+                                              .withTypeDefinition(fromType(getType(metadataType)))
+                                              .withTypeConverter(value -> resolverOf(parameterName, metadataType, value, getDefaultValue(metadataType), getExpressionSupport(metadataType), false))
+                                              .build());
+                    }
+
+                    @Override
+                    protected void defaultVisit(MetadataType metadataType)
+                    {
+                        addDefinition(baseDefinitionBuilder.copy()
+                                              .withIdentifier(itemElementName)
+                                              .withTypeDefinition(fromType(ValueResolver.class))
+                                              .withObjectFactoryType(TopLevelParameterObjectFactory.class)
+                                              .withConstructorParameterDefinition(fromFixedValue(arrayType.getType()).build())
+                                              .build());
+                    }
+                });
+            }
         });
     }
 

@@ -8,15 +8,11 @@ package org.mule.runtime.config.spring.dsl.spring;
 
 import static org.mule.runtime.config.spring.dsl.spring.DslSimpleType.SIMPLE_TYPE_VALUE_PARAMETER_NAME;
 import static org.mule.runtime.config.spring.dsl.spring.DslSimpleType.isSimpleType;
-import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
 import org.mule.runtime.config.spring.dsl.api.TypeConverter;
 import org.mule.runtime.config.spring.dsl.model.ComponentModel;
 import org.mule.runtime.config.spring.dsl.processor.ObjectTypeVisitor;
-import org.mule.runtime.config.spring.factories.ConstantFactoryBean;
 
 import java.util.Optional;
-
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 
 /**
  * Bean definition creator for elements that end up representing simple types.
@@ -44,22 +40,10 @@ public class SimpleTypeBeanDefinitionCreator extends BeanDefinitionCreator
             componentModel.setType(type);
             final String value = componentModel.getParameters().get(SIMPLE_TYPE_VALUE_PARAMETER_NAME);
             Optional<TypeConverter> typeConverterOptional = createBeanDefinitionRequest.getComponentBuildingDefinition().getTypeConverter();
-            Object convertedValue = typeConverterOptional.map(converter -> converter.convert(value)).orElse(value);
 
-            BeanDefinitionBuilder beanDefinitionBuilder;
-            if (convertedValue != null && !isSimpleType(convertedValue.getClass()))
-            {
-                beanDefinitionBuilder = genericBeanDefinition(ConstantFactoryBean.class).addConstructorArgValue(convertedValue);
-            }
-            else
-            {
-                beanDefinitionBuilder = genericBeanDefinition(type).addConstructorArgValue(convertedValue);
-            }
-
-            componentModel.setBeanDefinition(beanDefinitionBuilder.getBeanDefinition());
+            componentModel.setBeanDefinition(getConvertibleBeanDefinition(type, value, typeConverterOptional));
             return true;
         }
         return false;
     }
-
 }
