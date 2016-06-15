@@ -6,9 +6,10 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl;
 
+import static org.mule.metadata.utils.MetadataTypeUtils.getDefaultValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
-import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.SUPPORTED;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
+import static org.mule.runtime.extension.api.introspection.declaration.type.TypeUtils.getExpressionSupport;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.getTopLevelTypeName;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import org.mule.metadata.api.model.MetadataType;
@@ -17,6 +18,7 @@ import org.mule.metadata.api.model.ObjectType;
 import org.mule.metadata.api.visitor.MetadataTypeVisitor;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition.Builder;
 import org.mule.runtime.core.api.config.ConfigurationException;
+import org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 
 final class TopLevelParameterParser extends ExtensionDefinitionParser
@@ -31,9 +33,9 @@ final class TopLevelParameterParser extends ExtensionDefinitionParser
     }
 
     @Override
-    protected void doParse(Builder definition) throws ConfigurationException
+    protected void doParse(Builder definitionBuilder) throws ConfigurationException
     {
-        definition.withIdentifier(hyphenize(getTopLevelTypeName(type)))
+        definitionBuilder.withIdentifier(hyphenize(getTopLevelTypeName(type)))
                 .withTypeDefinition(fromType(ValueResolver.class))
                 .withObjectFactoryType(TopLevelParameterObjectFactory.class)
                 .withConstructorParameterDefinition(fromFixedValue(type).build());
@@ -42,6 +44,8 @@ final class TopLevelParameterParser extends ExtensionDefinitionParser
         {
             final MetadataType fieldType = objectField.getValue();
             final String parameterName = objectField.getKey().getName().getLocalPart();
+            final Object defaultValue = getDefaultValue(fieldType).orElse(null);
+            final ExpressionSupport expressionSupport = getExpressionSupport(fieldType);
 
             fieldType.accept(new MetadataTypeVisitor()
             {
@@ -49,13 +53,13 @@ final class TopLevelParameterParser extends ExtensionDefinitionParser
                 @Override
                 protected void defaultVisit(MetadataType metadataType)
                 {
-                    parseAttributeParameter(parameterName, metadataType, null, SUPPORTED, false);
+                    parseAttributeParameter(parameterName, metadataType, defaultValue, expressionSupport, false);
                 }
 
                 @Override
                 public void visitObject(ObjectType objectType)
                 {
-                    parsePojoParameter(parameterName, objectType, null, SUPPORTED, false);
+                    parsePojoParameter(parameterName, objectType, defaultValue, expressionSupport, false);
                 }
             });
         }

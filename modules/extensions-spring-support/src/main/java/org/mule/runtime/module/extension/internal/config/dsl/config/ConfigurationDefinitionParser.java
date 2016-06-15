@@ -9,7 +9,7 @@ package org.mule.runtime.module.extension.internal.config.dsl.config;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getConnectedComponents;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition.Builder;
@@ -34,9 +34,9 @@ public final class ConfigurationDefinitionParser extends ExtensionDefinitionPars
     }
 
     @Override
-    protected void doParse(Builder definition) throws ConfigurationException
+    protected void doParse(Builder definitionBuilder) throws ConfigurationException
     {
-        definition.withIdentifier(hyphenize(configurationModel.getName()))
+        definitionBuilder.withIdentifier(hyphenize(configurationModel.getName()))
                 .withTypeDefinition(fromType(ConfigurationProvider.class))
                 .withObjectFactoryType(ConfigurationProviderObjectFactory.class)
                 .withConstructorParameterDefinition(fromSimpleParameter("name").build())
@@ -45,15 +45,15 @@ public final class ConfigurationDefinitionParser extends ExtensionDefinitionPars
                 .withSetterParameterDefinition("dynamicConfigPolicy", fromChildConfiguration(DynamicConfigPolicy.class).build());
 
         parseParameters(configurationModel.getParameterModels());
-        parseConnectionProvider(definition);
+        parseConnectionProvider(definitionBuilder);
 
     }
 
-    private void parseConnectionProvider(Builder definition)
+    private void parseConnectionProvider(Builder definitionBuilder)
     {
         if (!getConnectedComponents(configurationModel).isEmpty())
         {
-            definition.withSetterParameterDefinition("connectionProviderResolver", fromChildConfiguration(ConnectionProviderResolver.class).build());
+            definitionBuilder.withSetterParameterDefinition("connectionProviderResolver", fromChildConfiguration(ConnectionProviderResolver.class).build());
         }
     }
 

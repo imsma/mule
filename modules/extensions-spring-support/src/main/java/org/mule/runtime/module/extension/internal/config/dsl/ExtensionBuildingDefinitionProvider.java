@@ -6,41 +6,36 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl;
 
+import static java.util.Collections.emptyMap;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.core.util.ClassUtils.withContextClassLoader;
 import static org.mule.runtime.core.util.Preconditions.checkState;
-import static org.mule.runtime.module.extension.internal.config.dsl.config.ExtensionXmlNamespaceInfoProvider.EXTENSION_NAMESPACE;
+import static org.mule.runtime.module.extension.internal.config.dsl.config.ExtensionXmlNamespaceInfo.EXTENSION_NAMESPACE;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
-import static org.mule.runtime.module.extension.internal.util.NameUtils.getTopLevelTypeName;
-import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import org.mule.metadata.api.model.ArrayType;
 import org.mule.metadata.api.model.DictionaryType;
 import org.mule.metadata.api.model.MetadataType;
 import org.mule.metadata.api.model.ObjectType;
 import org.mule.metadata.api.visitor.MetadataTypeVisitor;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition;
+import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition.Builder;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinitionProvider;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.config.ConfigurationException;
-import org.mule.runtime.extension.api.BaseExtensionWalker;
 import org.mule.runtime.extension.api.ExtensionManager;
 import org.mule.runtime.extension.api.introspection.ExtensionModel;
 import org.mule.runtime.extension.api.introspection.RuntimeExtensionModel;
 import org.mule.runtime.extension.api.introspection.config.ConfigurationModel;
 import org.mule.runtime.extension.api.introspection.config.RuntimeConfigurationModel;
 import org.mule.runtime.extension.api.introspection.connection.ConnectionProviderModel;
-import org.mule.runtime.extension.api.introspection.connection.HasConnectionProviderModels;
-import org.mule.runtime.extension.api.introspection.operation.HasOperationModels;
 import org.mule.runtime.extension.api.introspection.operation.OperationModel;
 import org.mule.runtime.extension.api.introspection.operation.RuntimeOperationModel;
 import org.mule.runtime.extension.api.introspection.parameter.ParameterModel;
-import org.mule.runtime.extension.api.introspection.parameter.ParameterizedModel;
 import org.mule.runtime.extension.api.introspection.property.SubTypesModelProperty;
 import org.mule.runtime.extension.api.introspection.property.XmlModelProperty;
-import org.mule.runtime.extension.api.introspection.source.HasSourceModels;
 import org.mule.runtime.extension.api.introspection.source.RuntimeSourceModel;
 import org.mule.runtime.extension.api.introspection.source.SourceModel;
 import org.mule.runtime.module.extension.internal.config.ExtensionConfig;
@@ -49,28 +44,17 @@ import org.mule.runtime.module.extension.internal.config.dsl.config.ConnectionPr
 import org.mule.runtime.module.extension.internal.config.dsl.config.OperationDefinitionParser;
 import org.mule.runtime.module.extension.internal.config.dsl.config.SourceDefinitionParser;
 import org.mule.runtime.module.extension.internal.introspection.SubTypesMappingContainer;
+import org.mule.runtime.module.extension.internal.util.IdempotentExtensionWalker;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import org.springframework.beans.factory.xml.BeanDefinitionParser;
 
 public class ExtensionBuildingDefinitionProvider implements ComponentBuildingDefinitionProvider
 {
 
     private final List<ComponentBuildingDefinition> definitions = new LinkedList<>();
-
-    private final Map<String, ExtensionModel> handledExtensions = new HashMap<>();
-    private final Multimap<ExtensionModel, String> topLevelParameters = HashMultimap.create();
-    private final Map<String, BeanDefinitionParser> parsers = new HashMap<>();
     private ExtensionManager extensionManager;
     private MuleContext muleContext;
 
@@ -94,7 +78,7 @@ public class ExtensionBuildingDefinitionProvider implements ComponentBuildingDef
     @Override
     public List<ComponentBuildingDefinition> getComponentBuildingDefinitions()
     {
-        ComponentBuildingDefinition.Builder baseDefinition = new ComponentBuildingDefinition.Builder().withNamespace(EXTENSION_NAMESPACE);
+        Builder baseDefinition = new Builder().withNamespace(EXTENSION_NAMESPACE);
         definitions.add(baseDefinition.copy()
                                 .withIdentifier("extensions-config")
                                 .withTypeDefinition(fromType(ExtensionConfig.class))
@@ -120,55 +104,52 @@ public class ExtensionBuildingDefinitionProvider implements ComponentBuildingDef
             return;
         }
 
-        final ComponentBuildingDefinition.Builder definition = new ComponentBuildingDefinition.Builder().withNamespace(xmlModelProperty.getNamespace());
+        final Builder definition = new Builder().withNamespace(xmlModelProperty.getNamespace());
         Optional<SubTypesModelProperty> subTypesProperty = extensionModel.getModelProperty(SubTypesModelProperty.class);
-        SubTypesMappingContainer typeMapping = new SubTypesMappingContainer(subTypesProperty.isPresent() ? subTypesProperty.get().getSubTypesMapping() : Collections.emptyMap());
+        SubTypesMappingContainer typeMapping = new SubTypesMappingContainer(subTypesProperty.isPresent() ? subTypesProperty.get().getSubTypesMapping() : emptyMap());
 
-        withContextClassLoader(getClassLoader(extensionModel), () -> {
-
-            new BaseExtensionWalker()
-            {
-                @Override
-                public void onConfiguration(ConfigurationModel model)
+        withContextClassLoader(getClassLoader(extensionModel), () ->
+                new IdempotentExtensionWalker()
                 {
-                    parseWith(new ConfigurationDefinitionParser(definition, (RuntimeConfigurationModel) model, muleContext));
-                }
+                    @Override
+                    public void onConfiguration(ConfigurationModel model)
+                    {
+                        parseWith(new ConfigurationDefinitionParser(definition, (RuntimeConfigurationModel) model, muleContext));
+                    }
 
-                @Override
-                public void onOperation(HasOperationModels owner, OperationModel model)
-                {
-                    parseWith(new OperationDefinitionParser(definition, (RuntimeExtensionModel) extensionModel, (RuntimeOperationModel) model, muleContext));
-                }
+                    @Override
+                    public void onOperation(OperationModel model)
+                    {
+                        parseWith(new OperationDefinitionParser(definition, (RuntimeExtensionModel) extensionModel, (RuntimeOperationModel) model, muleContext));
+                    }
 
-                @Override
-                public void onConnectionProvider(HasConnectionProviderModels owner, ConnectionProviderModel model)
-                {
-                    parseWith(new ConnectionProviderDefinitionParser(definition, model, muleContext));
-                }
+                    @Override
+                    public void onConnectionProvider(ConnectionProviderModel model)
+                    {
+                        parseWith(new ConnectionProviderDefinitionParser(definition, model, muleContext));
+                    }
 
-                @Override
-                public void onSource(HasSourceModels owner, SourceModel model)
-                {
-                    parseWith(new SourceDefinitionParser(definition, (RuntimeExtensionModel) extensionModel, (RuntimeSourceModel) model, muleContext));
-                }
+                    @Override
+                    public void onSource(SourceModel model)
+                    {
+                        parseWith(new SourceDefinitionParser(definition, (RuntimeExtensionModel) extensionModel, (RuntimeSourceModel) model, muleContext));
+                    }
 
-                @Override
-                public void onParameter(ParameterizedModel owner, ParameterModel model)
-                {
-                    typeMapping.getSubTypes(model.getType()).forEach(subtype -> registerTopLevelParameter(extensionModel, subtype, definition));
-                    registerTopLevelParameter(extensionModel, model.getType(), definition);
-                }
-            }.walk(extensionModel);
-
-            handledExtensions.put(xmlModelProperty.getNamespace(), extensionModel);
-        });
+                    @Override
+                    public void onParameter(ParameterModel model)
+                    {
+                        typeMapping.getSubTypes(model.getType()).forEach(subtype -> registerTopLevelParameter(subtype, definition));
+                        registerTopLevelParameter(model.getType(), definition);
+                    }
+                }.walk(extensionModel)
+        );
     }
 
     private void parseWith(ExtensionDefinitionParser parser)
     {
         try
         {
-            definitions.add(parser.parse());
+            definitions.addAll(parser.parse());
         }
         catch (ConfigurationException e)
         {
@@ -176,24 +157,20 @@ public class ExtensionBuildingDefinitionProvider implements ComponentBuildingDef
         }
     }
 
-    private void registerTopLevelParameter(final ExtensionModel extensionModel, final MetadataType parameterType, ComponentBuildingDefinition.Builder definition)
+    private void registerTopLevelParameter(final MetadataType parameterType, Builder definitionBuilder)
     {
         parameterType.accept(new MetadataTypeVisitor()
         {
             @Override
             public void visitObject(ObjectType objectType)
             {
-                String name = hyphenize(getTopLevelTypeName(objectType));
-                if (topLevelParameters.put(extensionModel, name))
-                {
-                    parseWith(new TopLevelParameterParser(definition, objectType));
-                }
+                parseWith(new TopLevelParameterParser(definitionBuilder, objectType));
             }
 
             @Override
             public void visitArrayType(ArrayType arrayType)
             {
-                registerTopLevelParameter(extensionModel, arrayType.getType(), definition.copy());
+                registerTopLevelParameter(arrayType.getType(), definitionBuilder.copy());
             }
 
             @Override
@@ -201,7 +178,7 @@ public class ExtensionBuildingDefinitionProvider implements ComponentBuildingDef
             {
                 MetadataType keyType = dictionaryType.getKeyType();
                 keyType.accept(this);
-                registerTopLevelParameter(extensionModel, keyType, definition.copy());
+                registerTopLevelParameter(keyType, definitionBuilder.copy());
             }
         });
     }

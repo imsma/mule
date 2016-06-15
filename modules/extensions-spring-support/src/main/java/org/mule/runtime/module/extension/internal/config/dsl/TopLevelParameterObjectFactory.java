@@ -16,9 +16,7 @@ import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver
 
 import java.lang.reflect.Field;
 
-import org.springframework.beans.factory.FactoryBean;
-
-public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFactory<ValueResolver<Object>> implements FactoryBean
+public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFactory<ValueResolver<Object>>
 {
 
     private final Class<Object> objectClass;
@@ -38,22 +36,10 @@ public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFacto
             Field field = getFieldByAlias(objectClass, key);
             if (field != null)
             {
-                builder.addPropertyResolver(field, value);
+                builder.addPropertyResolver(field, toValueResolver(value));
             }
         });
 
         return new ObjectBuilderValueResolver<>(builder);
-    }
-
-    @Override
-    public Class<?> getObjectType()
-    {
-        return objectClass;
-    }
-
-    @Override
-    public boolean isSingleton()
-    {
-        return true;
     }
 }

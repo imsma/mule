@@ -8,7 +8,7 @@ package org.mule.runtime.module.extension.internal.config.dsl.config;
 
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.module.extension.internal.ExtensionProperties.TARGET_ATTRIBUTE;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import static org.mule.runtime.module.extension.internal.xml.SchemaConstants.CONFIG_ATTRIBUTE;
@@ -36,9 +36,9 @@ public class OperationDefinitionParser extends ExtensionDefinitionParser
     }
 
     @Override
-    protected void doParse(Builder definition) throws ConfigurationException
+    protected void doParse(Builder definitionBuilder) throws ConfigurationException
     {
-        definition.withIdentifier(hyphenize(operationModel.getName()))
+        definitionBuilder.withIdentifier(hyphenize(operationModel.getName()))
                 .withTypeDefinition(fromType(OperationMessageProcessor.class))
                 .withObjectFactoryType(OperationMessageProcessorObjectFactory.class)
                 .withConstructorParameterDefinition(fromFixedValue(extensionModel).build())

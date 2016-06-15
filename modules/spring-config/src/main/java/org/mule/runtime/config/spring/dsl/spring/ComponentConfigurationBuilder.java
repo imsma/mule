@@ -6,17 +6,17 @@
  */
 package org.mule.runtime.config.spring.dsl.spring;
 
+import static java.util.Optional.of;
 import static java.util.stream.Collectors.toList;
 import static org.mule.runtime.config.spring.dsl.model.ApplicationModel.PROCESSING_STRATEGY_ATTRIBUTE;
 import static org.mule.runtime.config.spring.dsl.spring.CommonBeanDefinitionCreator.areMatchingTypes;
 import static org.mule.runtime.config.spring.util.ProcessingStrategyUtils.parseProcessingStrategy;
-import static org.mule.runtime.core.config.i18n.MessageFactory.createStaticMessage;
 import org.mule.runtime.config.spring.dsl.api.AttributeDefinition;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition;
+import org.mule.runtime.config.spring.dsl.api.KeyAttributeDefinitionPair;
 import org.mule.runtime.config.spring.dsl.api.TypeConverter;
 import org.mule.runtime.config.spring.dsl.model.ComponentModel;
 import org.mule.runtime.config.spring.dsl.processor.AttributeDefinitionVisitor;
-import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.processor.ProcessingStrategy;
 import org.mule.runtime.core.util.ClassUtils;
 
@@ -42,15 +42,14 @@ import org.springframework.beans.factory.support.ManagedMap;
  */
 class ComponentConfigurationBuilder
 {
-
     private static final Logger logger = LoggerFactory.getLogger(ComponentConfigurationBuilder.class);
 
-    private BeanDefinitionBuilderHelper beanDefinitionBuilderHelper;
+    private final BeanDefinitionBuilderHelper beanDefinitionBuilderHelper;
     private final ObjectReferencePopulator objectReferencePopulator = new ObjectReferencePopulator();
-    private List<ComponentValue> complexParameters;
-    private Map<String, String> simpleParameters;
-    private ComponentModel componentModel;
-    private ComponentBuildingDefinition componentBuildingDefinition;
+    private final List<ComponentValue> complexParameters;
+    private final Map<String, String> simpleParameters;
+    private final ComponentModel componentModel;
+    private final ComponentBuildingDefinition componentBuildingDefinition;
 
     public ComponentConfigurationBuilder(ComponentModel componentModel,
                                          ComponentBuildingDefinition componentBuildingDefinition,
@@ -59,14 +58,15 @@ class ComponentConfigurationBuilder
         this.componentModel = componentModel;
         this.componentBuildingDefinition = componentBuildingDefinition;
         this.beanDefinitionBuilderHelper = beanDefinitionBuilderHelper;
-        this.simpleParameters = new HashMap<>(componentModel.getParameters());
+        this.simpleParameters = new HashMap(componentModel.getParameters());
         this.complexParameters = collectComplexParametersWithTypes(componentModel);
     }
 
     public void processConfiguration()
     {
-        componentBuildingDefinition.getIgnoredConfigurationParameters().stream().forEach(simpleParameters::remove);
-
+        componentBuildingDefinition.getIgnoredConfigurationParameters().stream().forEach( ignoredParameter -> {
+            simpleParameters.remove(ignoredParameter);
+        });
         for (Map.Entry<String, AttributeDefinition> definitionEntry : componentBuildingDefinition.getSetterParameterDefinitions().entrySet())
         {
             definitionEntry.getValue().accept(setterVisitor(definitionEntry.getKey()));
@@ -116,9 +116,10 @@ class ComponentConfigurationBuilder
                 }
             }
             Object bean = cdm.getBeanDefinition() != null ? cdm.getBeanDefinition() : cdm.getBeanReference();
-            return new ComponentValue(cdm.getIdentifier(), beanDefinitionType, bean);
-        }).filter(beanDefinitionTypePair -> beanDefinitionTypePair != null)
-                .collect(toList());
+            return new ComponentValue(cdm, beanDefinitionType, bean);
+        }).filter(beanDefinitionTypePair -> {
+            return beanDefinitionTypePair != null;
+        }).collect(toList());
     }
 
     private ConfigurableAttributeDefinitionVisitor constructorVisitor()
@@ -143,7 +144,7 @@ class ComponentConfigurationBuilder
         private final Consumer<Object> valueConsumer;
 
         /**
-         * @param valueConsumer     consumer for handling a bean definition
+         * @param valueConsumer consumer for handling a bean definition
          * @param referenceConsumer consumer for handling a bean reference
          */
         ConfigurableAttributeDefinitionVisitor(Consumer<Object> valueConsumer, Consumer<String> referenceConsumer)
@@ -214,10 +215,18 @@ class ComponentConfigurationBuilder
         }
 
         @Override
-        public void onComplexChildList(Class<?> type, Optional<String> wrapperIdentifier)
+        public void onComplexChildCollection(Class<?> type, Optional<String> wrapperIdentifier)
         {
             ValueExtractorAttributeDefinitionVisitor valueExtractor = new ValueExtractorAttributeDefinitionVisitor();
-            valueExtractor.onComplexChildList(type, wrapperIdentifier);
+            valueExtractor.onComplexChildCollection(type, wrapperIdentifier);
+            valueConsumer.accept(valueExtractor.getValue());
+        }
+
+        @Override
+        public void onComplexChildMap(Class<?> keyType, Class<?> valueType, String wrapperIdentifier)
+        {
+            ValueExtractorAttributeDefinitionVisitor valueExtractor = new ValueExtractorAttributeDefinitionVisitor();
+            valueExtractor.onComplexChildMap(keyType, valueType, wrapperIdentifier);
             valueConsumer.accept(valueExtractor.getValue());
         }
 
@@ -242,19 +251,17 @@ class ComponentConfigurationBuilder
         }
 
         @Override
-        public void onMultipleValues(AttributeDefinition[] definitions)
+        public void onMultipleValues(KeyAttributeDefinitionPair[] definitions)
         {
             ManagedMap managedMap = new ManagedMap();
-            for (AttributeDefinition definition : definitions)
+            for (KeyAttributeDefinitionPair definition : definitions)
             {
                 ValueExtractorAttributeDefinitionVisitor valueExtractor = new ValueExtractorAttributeDefinitionVisitor();
-                KeyExtractorAttributeDefinitionVisitor keyExtractor = new KeyExtractorAttributeDefinitionVisitor();
-                definition.accept(keyExtractor);
-                definition.accept(valueExtractor);
+                definition.getAttributeDefinition().accept(valueExtractor);
                 Object value = valueExtractor.getValue();
                 if (value != null)
                 {
-                    managedMap.put(keyExtractor.getKey(), value);
+                    managedMap.put(definition.getKey(), value);
                 }
             }
             valueConsumer.accept(managedMap);
@@ -267,7 +274,6 @@ class ComponentConfigurationBuilder
      */
     private class ValueExtractorAttributeDefinitionVisitor implements AttributeDefinitionVisitor
     {
-
         private Object value;
 
         private String getStringValue()
@@ -283,7 +289,9 @@ class ComponentConfigurationBuilder
         @Override
         public void onReferenceObject(Class<?> objectType)
         {
-            objectReferencePopulator.populate(objectType, referenceId -> this.value = referenceId);
+            objectReferencePopulator.populate(objectType, (referenceId) -> {
+                this.value = referenceId;
+            });
         }
 
         @Override
@@ -334,7 +342,7 @@ class ComponentConfigurationBuilder
         }
 
         @Override
-        public void onComplexChildList(Class<?> type, Optional<String> wrapperIdentifier)
+        public void onComplexChildCollection(Class<?> type, Optional<String> wrapperIdentifier)
         {
             Predicate<ComponentValue> matchesTypeAndIdentifierPredicate = getTypeAndIdentifierPredicate(type, wrapperIdentifier);
             List<ComponentValue> matchingComponentValues = complexParameters.stream()
@@ -342,7 +350,6 @@ class ComponentConfigurationBuilder
                     .collect(toList());
 
             matchingComponentValues.stream().forEach(complexParameters::remove);
-
             if (wrapperIdentifier.isPresent() && !matchingComponentValues.isEmpty())
             {
                 this.value = matchingComponentValues.get(0).getBean();
@@ -357,6 +364,18 @@ class ComponentConfigurationBuilder
         }
 
         @Override
+        public void onComplexChildMap(Class<?> keyType, Class<?> valueType, String wrapperIdentifier)
+        {
+            Optional<ComponentValue> componentValueOptional = complexParameters.stream()
+                    .filter(getTypeAndIdentifierPredicate(MapFactoryBean.class, of(wrapperIdentifier)))
+                    .findFirst();
+            componentValueOptional.ifPresent( componentValue -> {
+                complexParameters.remove(componentValue);
+                value = componentValue.getBean();
+            });
+        }
+
+        @Override
         public void onComplexChild(Class<?> type, Optional<String> wrapperIdentifier)
         {
             Predicate<ComponentValue> matchesTypeAndIdentifierPredicate = getTypeAndIdentifierPredicate(type, wrapperIdentifier);
@@ -368,12 +387,14 @@ class ComponentConfigurationBuilder
             });
         }
 
-        private Predicate<ComponentValue> getTypeAndIdentifierPredicate(Class<?> type, Optional<String> identifierOptional)
+        private Predicate<ComponentValue> getTypeAndIdentifierPredicate(Class<?> type, Optional<String> wrapperIdentifierOptional)
         {
-            return beanDefinitionTypePair -> {
+            return componentValue -> {
                 AtomicReference<Boolean> matchesIdentifier = new AtomicReference<>(true);
-                identifierOptional.ifPresent(identifier -> matchesIdentifier.set(identifier.equals(beanDefinitionTypePair.getIdentifier().getName())));
-                return areMatchingTypes(type, beanDefinitionTypePair.getType()) && matchesIdentifier.get();
+                wrapperIdentifierOptional.ifPresent(wrapperIdentifier -> {
+                    matchesIdentifier.set(wrapperIdentifier.equals(componentValue.getComponentModel().getIdentifier().getName()));
+                });
+                return matchesIdentifier.get() && areMatchingTypes(type, componentValue.getType());
             };
         }
 
@@ -384,95 +405,13 @@ class ComponentConfigurationBuilder
         }
 
         @Override
-        public void onMultipleValues(AttributeDefinition[] definitions)
+        public void onMultipleValues(KeyAttributeDefinitionPair[] definitions)
         {
-            for (AttributeDefinition definition : definitions)
+            for (KeyAttributeDefinitionPair definition : definitions)
             {
-                definition.accept(this);
+                definition.getAttributeDefinition().accept(this);
             }
         }
-    }
-
-    /**
-     * {code AttributeDefinitionVisitor} that generates a key from an {@code AttributeDefinition} to be used when
-     * {@link AttributeDefinition.Builder#fromMultipleDefinitions(org.mule.runtime.config.spring.dsl.api.AttributeDefinition...)}
-     * is used to define an object attribute. Such attribute will receive a {@code Map} with several configuration values
-     * and the keys will be generated using this visitor.
-     */
-    private class KeyExtractorAttributeDefinitionVisitor implements AttributeDefinitionVisitor
-    {
-
-        private Object key;
-
-        public Object getKey()
-        {
-            return key;
-        }
-
-        @Override
-        public void onReferenceObject(Class<?> objectType)
-        {
-            this.key = objectType;
-        }
-
-        @Override
-        public void onReferenceSimpleParameter(final String configAttributeName)
-        {
-            this.key = configAttributeName;
-        }
-
-        @Override
-        public void onFixedValue(Object value)
-        {
-            this.key = value;
-        }
-
-        @Override
-        public void onConfigurationParameter(String parameterName, Object defaultValue, Optional<TypeConverter> typeConverter)
-        {
-            this.key = parameterName;
-        }
-
-        @Override
-        public void onUndefinedSimpleParameters()
-        {
-            throw new MuleRuntimeException(createStaticMessage("onUndefinedSimpleParameters is not supported for multiple configuration attributes injection"));
-        }
-
-        @Override
-        public void onUndefinedComplexParameters()
-        {
-            throw new MuleRuntimeException(createStaticMessage("onUndefinedComplexParameters is not supported for multiple configuration attributes injection"));
-        }
-
-        @Override
-        public void onComplexChildList(Class<?> type, Optional<String> wrapperIdentifier)
-        {
-            this.key = type;
-            wrapperIdentifier.ifPresent(identifier -> this.key = identifier);
-        }
-
-        @Override
-        public void onComplexChild(Class<?> type, Optional<String> wrapperIdentifier)
-        {
-            onComplexChildList(type, wrapperIdentifier);
-        }
-
-        @Override
-        public void onValueFromTextContent()
-        {
-            this.key = "context";
-        }
-
-        @Override
-        public void onMultipleValues(AttributeDefinition[] definitions)
-        {
-            for (AttributeDefinition definition : definitions)
-            {
-                definition.accept(this);
-            }
-        }
-
     }
 
     private ManagedList constructManagedList(List<Object> beans)
@@ -484,7 +423,9 @@ class ComponentConfigurationBuilder
 
     private List<Object> fromBeanDefinitionTypePairToBeanDefinition(List<ComponentValue> undefinedComplexParameters)
     {
-        return undefinedComplexParameters.stream().map(ComponentValue::getBean).collect(toList());
+        return undefinedComplexParameters.stream().map(beanDefinitionTypePair -> {
+            return beanDefinitionTypePair.getBean();
+        }).collect(toList());
     }
 
 }

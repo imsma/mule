@@ -9,33 +9,40 @@ package org.mule.runtime.module.extension.internal.config.dsl;
 import static java.lang.String.format;
 import static org.mule.metadata.java.utils.JavaTypeUtils.getGenericTypeAt;
 import static org.mule.metadata.java.utils.JavaTypeUtils.getType;
+import static org.mule.metadata.utils.MetadataTypeUtils.getDefaultValue;
 import static org.mule.metadata.utils.MetadataTypeUtils.getSingleAnnotation;
+import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildCollectionConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
-import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildListConfiguration;
+import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromMultipleDefinitions;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
+import static org.mule.runtime.config.spring.dsl.api.KeyAttributeDefinitionPair.newBuilder;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.core.config.i18n.MessageFactory.createStaticMessage;
+import static org.mule.runtime.extension.api.introspection.declaration.type.TypeUtils.getExpressionSupport;
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.LITERAL;
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.NOT_SUPPORTED;
 import static org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport.REQUIRED;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
+import static org.mule.runtime.module.extension.internal.util.NameUtils.singularize;
 import org.mule.metadata.api.ClassTypeLoader;
 import org.mule.metadata.api.model.ArrayType;
 import org.mule.metadata.api.model.DateTimeType;
 import org.mule.metadata.api.model.DateType;
 import org.mule.metadata.api.model.DictionaryType;
 import org.mule.metadata.api.model.MetadataType;
+import org.mule.metadata.api.model.ObjectFieldType;
 import org.mule.metadata.api.model.ObjectType;
 import org.mule.metadata.api.visitor.MetadataTypeVisitor;
 import org.mule.metadata.java.annotation.GenericTypesAnnotation;
 import org.mule.runtime.config.spring.dsl.api.AttributeDefinition;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition.Builder;
+import org.mule.runtime.config.spring.dsl.api.KeyAttributeDefinitionPair;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.util.ClassUtils;
-import org.mule.runtime.core.util.CollectionUtils;
 import org.mule.runtime.core.util.TemplateParser;
 import org.mule.runtime.core.util.ValueHolder;
 import org.mule.runtime.extension.api.introspection.declaration.type.ExtensionsTypeLoaderFactory;
@@ -50,10 +57,15 @@ import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
-import java.util.LinkedList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.springframework.core.convert.ConversionService;
@@ -68,32 +80,36 @@ public abstract class ExtensionDefinitionParser
     private final TemplateParser parser = TemplateParser.createMuleStyleParser();
     private final ConversionService conversionService = new DefaultConversionService();
     private final ClassTypeLoader typeLoader = ExtensionsTypeLoaderFactory.getDefault().createTypeLoader();
-    private final List<AttributeDefinition.Builder> parameters = new LinkedList<>();
-    private final Builder definition;
+    private final Map<String, AttributeDefinition.Builder> parameters = new HashMap<>();
+    private final Builder baseDefinitionBuilder;
+    private final List<ComponentBuildingDefinition> parsedDefinitions = new ArrayList<>();
 
-    protected ExtensionDefinitionParser(Builder definition)
+    protected ExtensionDefinitionParser(Builder baseDefinitionBuilder)
     {
-        this.definition = definition;
+        this.baseDefinitionBuilder = baseDefinitionBuilder;
     }
 
-    public final ComponentBuildingDefinition parse() throws ConfigurationException
+    public final List<ComponentBuildingDefinition> parse() throws ConfigurationException
     {
-        final Builder builder = definition.copy();
+        final Builder builder = baseDefinitionBuilder.copy();
         doParse(builder);
 
-        if (!CollectionUtils.isEmpty(parameters))
+        AttributeDefinition parametersDefinition = fromFixedValue(new HashMap<>()).build();
+        if (!parameters.isEmpty())
         {
-            AttributeDefinition[] attributeDefinitions = parameters.stream()
-                    .map(AttributeDefinition.Builder::build)
-                    .toArray(AttributeDefinition[]::new);
-
-            builder.withSetterParameterDefinition("parameters", fromMultipleDefinitions(attributeDefinitions).build());
+            KeyAttributeDefinitionPair[] attributeDefinitions = parameters.entrySet().stream()
+                    .map(entry -> newBuilder().withAttributeDefinition(entry.getValue().build()).withKey(entry.getKey()).build())
+                    .toArray(KeyAttributeDefinitionPair[]::new);
+            parametersDefinition = fromMultipleDefinitions(attributeDefinitions).build();
         }
 
-        return builder.build();
+        builder.withSetterParameterDefinition("parameters", parametersDefinition);
+
+        addDefinition(builder.build());
+        return parsedDefinitions;
     }
 
-    protected abstract void doParse(Builder definition) throws ConfigurationException;
+    protected abstract void doParse(Builder definitionBuilder) throws ConfigurationException;
 
     protected void parseParameters(List<ParameterModel> parameters)
     {
@@ -123,21 +139,69 @@ public abstract class ExtensionDefinitionParser
                 @Override
                 public void visitArrayType(ArrayType arrayType)
                 {
-                    //TODO specify collection type
                     parseCollectionParameter(parameter, arrayType);
                 }
             });
         });
     }
 
-    protected void parseCollectionParameter(ParameterModel parameter, ArrayType arrayType)
+    private void parseCollectionParameter(ParameterModel parameter, ArrayType arrayType)
     {
         parseAttributeParameter(parameter.getName(), parameter.getType(), parameter.getDefaultValue(), parameter.getExpressionSupport(), parameter.isRequired());
-        addParameter(fromChildListConfiguration(getType(arrayType.getType())).withWrapperIdentifier(hyphenize(parameter.getName())));
+
+        Class<? extends Iterable> collectionType = getType(arrayType);
+
+        if (Set.class.equals(collectionType))
+        {
+            collectionType = HashSet.class;
+        }
+        else if (Collection.class.equals(collectionType) || Iterable.class.equals(collectionType) || collectionType == null)
+        {
+            collectionType = List.class;
+        }
+
+        final String collectionElementName = hyphenize(parameter.getName());
+        addParameter(parameter.getName(), fromChildCollectionConfiguration(collectionType).withWrapperIdentifier(collectionElementName));
+        addDefinition(baseDefinitionBuilder.copy()
+                              .withIdentifier(collectionElementName)
+                              .withTypeDefinition(fromType(collectionType))
+                              .build());
+
+        Builder itemDefinitionBuilder = baseDefinitionBuilder.copy().withIdentifier(singularize(parameter.getName()));
+
+        arrayType.getType().accept(new BasicTypeMetadataVisitor()
+        {
+            @Override
+            protected void visitBasicType(MetadataType metadataType)
+            {
+                itemDefinitionBuilder.withTypeDefinition(fromType(getType(metadataType)))
+                        .withTypeConverter(value -> resolverOf(parameter.getName(),
+                                                               metadataType,
+                                                               value,
+                                                               getDefaultValue(metadataType).orElse(null),
+                                                               getExpressionSupport(metadataType),
+                                                               false));
+            }
+
+            @Override
+            public void visitObject(ObjectType objectType)
+            {
+                itemDefinitionBuilder.withTypeDefinition(fromType(ValueResolver.class))
+                        .withObjectFactoryType(TopLevelParameterObjectFactory.class)
+                        .withConstructorParameterDefinition(fromFixedValue(objectType).build());
+            }
+        });
+
+        addDefinition(itemDefinitionBuilder.build());
     }
 
     private ValueResolver<?> resolverOf(String parameterName, MetadataType expectedType, Object value, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
     {
+        if (value instanceof ValueResolver)
+        {
+            return (ValueResolver<?>) value;
+        }
+
         ValueResolver resolver = null;
         if (expressionSupport == LITERAL)
         {
@@ -224,7 +288,7 @@ public abstract class ExtensionDefinitionParser
     protected AttributeDefinition.Builder parseAttributeParameter(String name, MetadataType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
     {
         AttributeDefinition.Builder definitionBuilder = fromSimpleParameter(name, value -> resolverOf(name, type, value, defaultValue, expressionSupport, required));
-        addParameter(definitionBuilder);
+        addParameter(name, definitionBuilder);
 
         return definitionBuilder;
     }
@@ -232,12 +296,33 @@ public abstract class ExtensionDefinitionParser
     protected void parsePojoParameter(String name, ObjectType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
     {
         parseAttributeParameter(name, type, defaultValue, expressionSupport, required);
-        addParameter(fromChildConfiguration(getType(type)).withWrapperIdentifier(hyphenize(name)).withDefaultValue(defaultValue));
+        addParameter(name, fromChildConfiguration(ValueResolver.class).withWrapperIdentifier(hyphenize(name)));
+        for (ObjectFieldType field : type.getFields())
+        {
+            field.getValue().accept(new MetadataTypeVisitor()
+            {
+                @Override
+                public void visitObject(ObjectType objectType)
+                {
+                    addDefinition(baseDefinitionBuilder.copy()
+                                          .withIdentifier(hyphenize(field.getKey().getName().getLocalPart()))
+                                          .withTypeDefinition(fromType(ValueResolver.class))
+                                          .withObjectFactoryType(TopLevelParameterObjectFactory.class)
+                                          .withConstructorParameterDefinition(fromFixedValue(objectType).build())
+                                          .build());
+                }
+            });
+        }
     }
 
-    private void addParameter(AttributeDefinition.Builder definitionBuilder)
+    protected void addDefinition(ComponentBuildingDefinition definition)
     {
-        parameters.add(definitionBuilder);
+        parsedDefinitions.add(definition);
+    }
+
+    private void addParameter(String key, AttributeDefinition.Builder definitionBuilder)
+    {
+        parameters.put(key, definitionBuilder);
     }
 
     private boolean isExpressionFunction(MetadataType metadataType)

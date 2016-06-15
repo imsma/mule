@@ -9,7 +9,7 @@ package org.mule.runtime.module.extension.internal.config.dsl.config;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.core.config.i18n.MessageFactory.createStaticMessage;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import org.mule.runtime.api.config.PoolingProfile;
@@ -37,9 +37,9 @@ public final class ConnectionProviderDefinitionParser extends ExtensionDefinitio
     }
 
     @Override
-    protected void doParse(Builder definition) throws ConfigurationException
+    protected void doParse(Builder definitionBuilder) throws ConfigurationException
     {
-        definition.withIdentifier(hyphenize(providerModel.getName()))
+        definitionBuilder.withIdentifier(hyphenize(providerModel.getName()))
                 .withTypeDefinition(fromType(ConnectionProviderResolver.class))
                 .withObjectFactoryType(ConnectionProviderObjectFactory.class)
                 .withConstructorParameterDefinition(fromFixedValue(providerModel).build())

@@ -9,7 +9,7 @@ package org.mule.runtime.module.extension.internal.config.dsl.config;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromSimpleParameter;
-import static org.mule.runtime.config.spring.dsl.processor.TypeDefinition.fromType;
+import static org.mule.runtime.config.spring.dsl.api.TypeDefinition.fromType;
 import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import static org.mule.runtime.module.extension.internal.xml.SchemaConstants.CONFIG_ATTRIBUTE;
 import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition;
@@ -37,9 +37,9 @@ public class SourceDefinitionParser extends ExtensionDefinitionParser
     }
 
     @Override
-    protected void doParse(ComponentBuildingDefinition.Builder definition) throws ConfigurationException
+    protected void doParse(ComponentBuildingDefinition.Builder definitionBuilder) throws ConfigurationException
     {
-        definition.withIdentifier(hyphenize(sourceModel.getName()))
+        definitionBuilder.withIdentifier(hyphenize(sourceModel.getName()))
                 .withTypeDefinition(fromType(ExtensionMessageSource.class))
                 .withObjectFactoryType(ExtensionSourceObjectFactory.class)
                 .withConstructorParameterDefinition(fromFixedValue(extensionModel).build())

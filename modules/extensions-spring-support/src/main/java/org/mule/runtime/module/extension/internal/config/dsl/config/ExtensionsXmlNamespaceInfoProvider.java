@@ -6,21 +6,19 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl.config;
 
+import static java.util.Arrays.asList;
+import org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfo;
 import org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfoProvider;
 
-public class HeisenbergXmlNamespaceInfoProvider implements XmlNamespaceInfoProvider
+import java.util.Collection;
+
+public class ExtensionsXmlNamespaceInfoProvider implements XmlNamespaceInfoProvider
 {
-    public static final String EXTENSION_NAMESPACE = "heisenberg";
 
     @Override
-    public String getNamespaceUriPrefix()
+    public Collection<XmlNamespaceInfo> getXmlNamespacesInfo()
     {
-        return "http://www.mulesoft.org/schema/mule/heisenberg";
-    }
-
-    @Override
-    public String getNamespace()
-    {
-        return EXTENSION_NAMESPACE;
+        return asList(new ExtensionXmlNamespaceInfo(),
+                      new HeisenbergXmlNamespaceInfo());
     }
 }

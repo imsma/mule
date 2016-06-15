@@ -6,9 +6,9 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl.config;
 
-import org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfoProvider;
+import org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfo;
 
-public class ExtensionXmlNamespaceInfoProvider implements XmlNamespaceInfoProvider
+public class ExtensionXmlNamespaceInfo implements XmlNamespaceInfo
 {
     public static final String EXTENSION_NAMESPACE = "extension";
 

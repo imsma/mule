@@ -6,27 +6,29 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl;
 
-import static org.mule.runtime.module.extension.internal.util.NameUtils.camel;
-import static org.mule.runtime.module.extension.internal.util.NameUtils.hyphenize;
 import org.mule.runtime.config.spring.dsl.api.ObjectFactory;
+import org.mule.runtime.module.extension.internal.runtime.resolver.CollectionValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
+import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 
+import com.google.common.collect.ImmutableList;
+
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory<T>
 {
 
-    private Map<String, ValueResolver<?>> parameters = new HashMap<>();
+    private Map<String, Object> parameters = new HashMap<>();
 
-    protected Map<String, ValueResolver<?>> getParameters()
+    protected Map<String, Object> getParameters()
     {
-        validateParameters();
         return parameters;
     }
 
-    public void setParameters(Map<String, ValueResolver<?>> parameters)
+    public void setParameters(Map<String, Object> parameters)
     {
         this.parameters = parameters;
     }
@@ -34,27 +36,28 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
     protected ResolverSet getParametersAsResolverSet()
     {
         ResolverSet resolverSet = new ResolverSet();
-        getParameters().forEach((key, valueResolver) -> resolverSet.add(key, valueResolver));
+        getParameters().forEach((key, value) -> {
+            resolverSet.add(key, toValueResolver(value));
+        });
 
         return resolverSet;
     }
 
-    private void validateParameters()
+    protected ValueResolver<?> toValueResolver(Object value)
     {
-        parameters.keySet().stream()
-                .filter(key -> {
-                    if (key.contains("-") && parameters.containsKey(camel(key)))
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        String hypenized = hyphenize(key);
-                        return !hypenized.equals(key) && parameters.containsKey(hypenized);
-                    }
-                }).findFirst()
-                .ifPresent(parameter -> {
-                    throw new IllegalArgumentException(String.format("Parameter '%s' was specified as an attribute and as a child element at the same time.", parameter));
-                });
+        ValueResolver<?> resolver;
+        if (value instanceof ValueResolver)
+        {
+            resolver = (ValueResolver<?>) value;
+        }
+        else if (value instanceof Collection)
+        {
+            resolver = CollectionValueResolver.of((Class<? extends Collection>) value.getClass(), ImmutableList.copyOf((Iterable) value));
+        }
+        else
+        {
+            resolver = new StaticValueResolver<>(value);
+        }
+        return resolver;
     }
 }

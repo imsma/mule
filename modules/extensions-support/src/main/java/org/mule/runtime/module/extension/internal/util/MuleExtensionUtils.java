@@ -19,7 +19,6 @@ import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.construct.FlowConstruct;
 import org.mule.runtime.core.util.collection.ImmutableListCollector;
-import org.mule.runtime.extension.api.BaseExtensionWalker;
 import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.exception.IllegalModelDefinitionException;
 import org.mule.runtime.extension.api.introspection.ComponentModel;
@@ -31,13 +30,11 @@ import org.mule.runtime.extension.api.introspection.config.ConfigurationModel;
 import org.mule.runtime.extension.api.introspection.config.RuntimeConfigurationModel;
 import org.mule.runtime.extension.api.introspection.connection.ConnectionProviderModel;
 import org.mule.runtime.extension.api.introspection.declaration.fluent.OperationDeclaration;
-import org.mule.runtime.extension.api.introspection.operation.HasOperationModels;
 import org.mule.runtime.extension.api.introspection.operation.OperationModel;
 import org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport;
 import org.mule.runtime.extension.api.introspection.parameter.ParameterModel;
 import org.mule.runtime.extension.api.introspection.parameter.ParameterizedModel;
 import org.mule.runtime.extension.api.introspection.property.ClassLoaderModelProperty;
-import org.mule.runtime.extension.api.introspection.source.HasSourceModels;
 import org.mule.runtime.extension.api.introspection.source.SourceModel;
 import org.mule.runtime.extension.api.runtime.Interceptor;
 import org.mule.runtime.extension.api.runtime.InterceptorFactory;
@@ -122,16 +119,16 @@ public class MuleExtensionUtils
     public static List<ComponentModel> getConnectedComponents(RuntimeConfigurationModel configurationModel)
     {
         List<ComponentModel> connectedModels = new LinkedList<>();
-        new BaseExtensionWalker()
+        new IdempotentExtensionWalker()
         {
             @Override
-            public void onOperation(HasOperationModels owner, OperationModel model)
+            public void onOperation(OperationModel model)
             {
                 collect(model);
             }
 
             @Override
-            public void onSource(HasSourceModels owner, SourceModel model)
+            public void onSource(SourceModel model)
             {
                 collect(model);
             }
@@ -145,9 +142,7 @@ public class MuleExtensionUtils
             }
         }.walk(configurationModel.getExtensionModel());
 
-        List<ComponentModel> components = new LinkedList<>();
-
-        return components;
+        return connectedModels;
     }
 
     /**
