@@ -83,6 +83,7 @@ import org.mule.runtime.core.transaction.lookup.Resin3TransactionManagerLookupFa
 import org.mule.runtime.core.transaction.lookup.WeblogicTransactionManagerLookupFactory;
 import org.mule.runtime.core.transaction.lookup.WebsphereTransactionManagerLookupFactory;
 import org.mule.runtime.core.transformer.AbstractTransformer;
+import org.mule.runtime.core.transformer.simple.AddFlowVariableTransformer;
 import org.mule.runtime.core.transformer.simple.SetPayloadMessageProcessor;
 
 import java.util.LinkedList;
@@ -486,6 +487,13 @@ public class CoreComponentBuildingDefinitionProvider implements ComponentBuildin
                                                  .withSetterParameterDefinition("enricherPropagatesSessionVariableChanges", fromSimpleParameter("enricherPropagatesSessionVariableChanges").build())
                                                  .withSetterParameterDefinition("extensions", fromChildCollectionConfiguration(Object.class).build())
                                                  .withSetterParameterDefinition("defaultObjectSerializer", fromSimpleReferenceParameter("defaultObjectSerializer-ref").build())
+                                                 .build());
+
+        componentBuildingDefinitions.add(baseDefinition.copy()
+                                                 .withIdentifier("set-variable")
+                                                 .withTypeDefinition(fromType(AddFlowVariableTransformer.class))
+                                                 .withSetterParameterDefinition("identifier", fromSimpleParameter("variableName").build())
+                                                 .withSetterParameterDefinition("value", fromSimpleParameter("value").build())
                                                  .build());
         return componentBuildingDefinitions;
     }

@@ -181,6 +181,11 @@ public class ComponentModel
         return beanReference;
     }
 
+    public void setIdentifier(ComponentIdentifier identifier)
+    {
+        this.identifier = identifier;
+    }
+
     /**
      * Builder to create instances of {@code ComponentModel}.
      */

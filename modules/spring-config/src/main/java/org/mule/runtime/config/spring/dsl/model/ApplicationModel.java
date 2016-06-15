@@ -18,6 +18,7 @@ import org.mule.runtime.config.spring.dsl.processor.ConfigFile;
 import org.mule.runtime.config.spring.dsl.processor.ConfigLine;
 import org.mule.runtime.config.spring.dsl.processor.SimpleConfigAttribute;
 import org.mule.runtime.core.api.MuleRuntimeException;
+import org.mule.runtime.core.api.component.Component;
 import org.mule.runtime.core.api.config.ConfigurationException;
 
 import com.google.common.collect.ImmutableSet;
@@ -28,7 +29,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.springframework.util.PropertyPlaceholderHelper;
 import org.w3c.dom.Element;
@@ -103,6 +106,11 @@ public class ApplicationModel
     public static final ComponentIdentifier TRANSFORMER_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(TRANSFORMER_REFERENCE_ELEMENT).build();
     public static final ComponentIdentifier QUEUE_STORE_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(QUEUE_STORE).build();
     public static final ComponentIdentifier CONFIGURATION_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName(CONFIGURATION_ELEMENT).build();
+    public static final ComponentIdentifier OPERATION_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("operation").build();
+    public static final ComponentIdentifier OPERATION_REF_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("operation-ref").build();
+    public static final ComponentIdentifier OPERATION_PARAMETERS_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("parameters").build();
+    public static final ComponentIdentifier OPERATION_PARAMETER_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("parameter").build();
+    public static final ComponentIdentifier OPERATION_BODY_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("body").build();
 
     private static ImmutableSet<ComponentIdentifier> ignoredNameValidationComponentList = ImmutableSet.<ComponentIdentifier>builder()
             .add(new ComponentIdentifier.Builder().withNamespace(MULE_ROOT_ELEMENT).withName("flow-ref").build())
@@ -154,7 +162,7 @@ public class ApplicationModel
             .add(new ComponentIdentifier.Builder().withNamespace(PARSER_TEST_NAMESPACE).withName("kid").build())
             .build();
 
-    private List<ComponentModel> muleComponentModels = new LinkedList<>();
+    private LinkedList<ComponentModel> muleComponentModels = new LinkedList<>();
     private List<ComponentModel> springComponentModels = new LinkedList<>();
     private PropertyPlaceholderHelper propertyPlaceholderHelper = new PropertyPlaceholderHelper("${", "}");
     private SystemPropertyPlaceholderResolver systemPropertyPlaceholderResolver = new SystemPropertyPlaceholderResolver("mule config property resolver");
@@ -171,6 +179,125 @@ public class ApplicationModel
     {
         convertConfigFileToComponentModel(applicationConfig);
         validateModel();
+        createEffectiveModel();
+        System.out.println("effective  model");
+    }
+
+    private void createEffectiveModel()
+    {
+        HashMap<Integer, ComponentModel> componentModelsToReplaceByIndex = new HashMap<>();
+        executeOnEveryMuleComponentTree(componentModel -> {
+            for (int i = 0; i < componentModel.getInnerComponents().size(); i++)
+            {
+                ComponentModel operationRefModel = componentModel.getInnerComponents().get(i);
+                if (operationRefModel.getIdentifier().equals(OPERATION_REF_IDENTIFIER))
+                {
+                    ComponentModel operationModel = searchOperation(operationRefModel.getParameters().get("operation"));
+                    ComponentModel replacementModel = createOperationInstance(operationRefModel, operationModel);
+                    componentModelsToReplaceByIndex.put(i, replacementModel);
+                }
+            }
+            for (Map.Entry<Integer, ComponentModel> entry : componentModelsToReplaceByIndex.entrySet())
+            {
+                entry.getValue().setParent(componentModel);
+                componentModel.getInnerComponents().add(entry.getKey(), entry.getValue());
+                componentModel.getInnerComponents().remove(entry.getKey() + 1);
+            }
+            componentModelsToReplaceByIndex.clear();
+        });
+    }
+
+    private ComponentModel createOperationInstance(ComponentModel operationRefModel, ComponentModel operationModel)
+    {
+        Map<String, String> parameterValues = new HashMap<>();
+        ComponentModel operationParametersModel = operationModel.getInnerComponents()
+                .stream()
+                .filter(operationModelChild -> operationModelChild.getIdentifier().equals(OPERATION_PARAMETERS_IDENTIFIER)).findAny().orElseThrow(() -> new RuntimeException("operation without parameters child"));
+        for (ComponentModel operationParameterModel : operationParametersModel.getInnerComponents())
+        {
+            String parameterName = operationParameterModel.getParameters().get("parameterName");
+            String value = operationParameterModel.getParameters().get("defaultValue");
+            for (ComponentModel parameterOperationRefModel : operationRefModel.getInnerComponents())
+            {
+                if (parameterOperationRefModel.getParameters().get("parameterName").equals(parameterName))
+                {
+                    value = parameterOperationRefModel.getParameters().get("value");
+                    break;
+                }
+            }
+            parameterValues.put(parameterName, value);
+        }
+
+        List<ComponentModel> bodyProcessors = operationModel.getInnerComponents()
+                .stream()
+                .filter( childComponent -> childComponent.getIdentifier().equals(OPERATION_BODY_IDENTIFIER))
+                .findAny().get().getInnerComponents();
+
+        ComponentModel.Builder processorChainBuilder = new ComponentModel.Builder();
+        processorChainBuilder.setIdentifier(new ComponentIdentifier.Builder().withNamespace("mule").withName("processor-chain").build());
+        for (ComponentModel bodyProcessor : bodyProcessors)
+        {
+            processorChainBuilder.addChildComponentModel(copyComponentModel(parameterValues, bodyProcessor));
+        }
+        for (Map.Entry<String, Object> customAttributeEntry : operationRefModel.getCustomAttributes().entrySet())
+        {
+            processorChainBuilder.addCustomAttribute(customAttributeEntry.getKey(), customAttributeEntry.getValue());
+        }
+        ComponentModel processorChainModel = processorChainBuilder.build();
+        for (ComponentModel processoChainModelChild : processorChainModel.getInnerComponents())
+        {
+            processoChainModelChild.setParent(processorChainModel);
+        }
+        return processorChainModel;
+    }
+
+    private ComponentModel copyComponentModel(Map<String, String> parameterValues, ComponentModel modelToCopy)
+    {
+        ComponentModel.Builder operationReplacementModel = new ComponentModel.Builder();
+        operationReplacementModel
+                .setIdentifier(modelToCopy.getIdentifier())
+                .setTextContent(modelToCopy.getTextContent());
+        for (Map.Entry<String, Object> entry : modelToCopy.getCustomAttributes().entrySet())
+        {
+            operationReplacementModel.addCustomAttribute(entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, String> entry : modelToCopy.getParameters().entrySet())
+        {
+            operationReplacementModel.addParameter(entry.getKey(), resolveOperationParameterValue(parameterValues, entry.getValue()));
+        }
+        for (ComponentModel operationChildModel : modelToCopy.getInnerComponents())
+        {
+            operationReplacementModel.addChildComponentModel(copyComponentModel(parameterValues, operationChildModel));
+        }
+        ComponentModel componentModel = operationReplacementModel.build();
+        for (ComponentModel child : componentModel.getInnerComponents())
+        {
+            child.setParent(componentModel);
+        }
+        return componentModel;
+    }
+
+    private String resolveOperationParameterValue(Map<String, String> parameterValues, String parameterValue)
+    {
+        String resolvedValue = parameterValue;
+        if (parameterValue.startsWith("$["))
+        {
+            String parameterIdentifier = parameterValue.replace("$[", "").replace("]", "");
+            resolvedValue = parameterValues.get(parameterIdentifier);
+        }
+        return resolvedValue;
+    }
+
+    private ComponentModel searchOperation(String name)
+    {
+        final AtomicReference<ComponentModel> foundOperationModel = new AtomicReference<>();
+        executeOnEveryMuleComponentTree(componentModel -> {
+            if (componentModel.getIdentifier().equals(OPERATION_IDENTIFIER) && componentModel.getParameters().get("name").equals(name))
+            {
+                foundOperationModel.set(componentModel);
+            }
+        });
+        return foundOperationModel.get();
     }
 
     /**
@@ -461,6 +588,7 @@ public class ApplicationModel
 
     /**
      * TODO MULE-9688: When the model it's made immutable we will also provide the parent component for navigation and this will not be needed anymore.
+     *
      * @return the root component model
      */
     public ComponentModel getRootComponentModel()

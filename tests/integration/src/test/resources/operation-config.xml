@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:pojo="http://www.mulesoft.org/schema/mule/pojo-test"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+       http://www.mulesoft.org/schema/mule/pojo-test http://www.mulesoft.org/schema/mule/pojo-test/current/mule-pojo-test.xsd
+       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <operation name="operation">
+        <parameters>
+            <parameter parameterName="in1"/>
+            <parameter parameterName="in2"/>
+        </parameters>
+        <body>
+            <set-payload value="$[in1]"/>
+            <set-variable variableName="testVar" value="$[in2]"/>
+        </body>
+    </operation>
+
+    <flow name="flow">
+        <operation-ref operation="operation">
+            <parameter parameterName="in1" value="hola amigoooooo"/>
+            <parameter parameterName="in2" value="testVarValue"/>
+        </operation-ref>
+    </flow>
+
+    <flow name="flow2">
+        <operation-ref operation="operation" >
+            <parameter parameterName="in1" value="hola amigoooooo2"/>
+            <parameter parameterName="in2" value="testVarValue2"/>
+        </operation-ref>
+    </flow>
+
+</mule>
