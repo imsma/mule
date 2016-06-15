@@ -111,6 +111,8 @@ public class ApplicationModel
     public static final ComponentIdentifier OPERATION_PARAMETERS_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("parameters").build();
     public static final ComponentIdentifier OPERATION_PARAMETER_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("parameter").build();
     public static final ComponentIdentifier OPERATION_BODY_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("body").build();
+    public static final ComponentIdentifier OPERATION_CONFIG_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("config").build();
+    public static final ComponentIdentifier OPERATION_CONFIG_REF_IDENTIFIER = new ComponentIdentifier.Builder().withNamespace(CORE_NAMESPACE_NAME).withName("config-ref").build();
 
     private static ImmutableSet<ComponentIdentifier> ignoredNameValidationComponentList = ImmutableSet.<ComponentIdentifier>builder()
             .add(new ComponentIdentifier.Builder().withNamespace(MULE_ROOT_ELEMENT).withName("flow-ref").build())
@@ -225,6 +227,15 @@ public class ApplicationModel
                 }
             }
             parameterValues.put(parameterName, value);
+        }
+        String configParameter = operationRefModel.getParameters().get("config");
+        if (configParameter != null)
+        {
+            ComponentModel configRefComponentModel = this.muleComponentModels.get(0).getInnerComponents().stream().filter(componentModel -> componentModel.getIdentifier().getName().equals("config-ref") && componentModel.getNameAttribute().equals(configParameter)).findAny().get();
+            for (ComponentModel parameterConfigModel : configRefComponentModel.getInnerComponents())
+            {
+                parameterValues.put("config:" + parameterConfigModel.getParameters().get("parameterName"), parameterConfigModel.getParameters().get("value"));
+            }
         }
 
         List<ComponentModel> bodyProcessors = operationModel.getInnerComponents()

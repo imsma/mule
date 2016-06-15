@@ -148,6 +148,7 @@
             <xsd:element ref="custom-queue-store" minOccurs="0" maxOccurs="unbounded"/>
             <xsd:element ref="abstract-processing-strategy" minOccurs="0" maxOccurs="unbounded"/>
             <xsd:element ref="operation"/>
+            <xsd:element ref="config"/>
         </xsd:choice>
     </xsd:group>
 
@@ -181,9 +182,40 @@
                     </xsd:element>
                 </xsd:sequence>
                 <xsd:attribute name="name"/>
+                <xsd:attribute name="config"/>
             </xsd:extension>
         </xsd:complexContent>
     </xsd:complexType>
+
+    <xsd:complexType name="operationConfigType">
+        <xsd:complexContent>
+            <xsd:extension base="abstractExtensionType">
+                <xsd:sequence>
+                    <xsd:element name="parameters" minOccurs="0" maxOccurs="1">
+                        <xsd:complexType>
+                            <xsd:sequence>
+                                <xsd:element name="parameter" minOccurs="1" maxOccurs="unbounded">
+                                    <xsd:complexType>
+                                        <xsd:attribute name="parameterName"/>
+                                        <xsd:attribute name="defaultValue" use="optional"/>
+                                    </xsd:complexType>
+                                </xsd:element>
+                            </xsd:sequence>
+                        </xsd:complexType>
+                    </xsd:element>
+                </xsd:sequence>
+                <xsd:attribute name="name"/>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <xsd:element name="config" type="operationConfigType" substitutionGroup="abstract-extension">
+        <xsd:annotation>
+            <xsd:documentation>
+                A transformer that sets the paylaod with the provided value
+            </xsd:documentation>
+        </xsd:annotation>
+    </xsd:element>
 
     <xsd:element name="operation" type="operationType" substitutionGroup="abstract-extension">
         <xsd:annotation>
@@ -211,6 +243,31 @@
                         </xsd:element>
                     </xsd:sequence>
                     <xsd:attribute name="operation"/>
+                    <xsd:attribute name="config"/>
+                </xsd:extension>
+            </xsd:complexContent>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="config-ref" substitutionGroup="abstract-extension">
+        <xsd:annotation>
+            <xsd:documentation>
+                A transformer that sets the paylaod with the provided value
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+            <xsd:complexContent>
+                <xsd:extension base="abstractExtensionType">
+                    <xsd:sequence>
+                        <xsd:element name="parameter" minOccurs="1" maxOccurs="unbounded">
+                            <xsd:complexType>
+                                <xsd:attribute name="parameterName"/>
+                                <xsd:attribute name="value"/>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                    <xsd:attribute name="name"/>
+                    <xsd:attribute name="config"/>
                 </xsd:extension>
             </xsd:complexContent>
         </xsd:complexType>

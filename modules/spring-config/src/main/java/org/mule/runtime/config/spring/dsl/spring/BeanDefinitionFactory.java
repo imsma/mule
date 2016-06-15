@@ -69,6 +69,8 @@ public class BeanDefinitionFactory
             .add(ApplicationModel.OPERATION_IDENTIFIER)
             .add(ApplicationModel.OPERATION_PARAMETERS_IDENTIFIER)
             .add(ApplicationModel.OPERATION_PARAMETER_IDENTIFIER)
+            .add(ApplicationModel.OPERATION_CONFIG_IDENTIFIER)
+            .add(ApplicationModel.OPERATION_CONFIG_REF_IDENTIFIER)
             .build();
 
     /**

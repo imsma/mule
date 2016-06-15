@@ -126,7 +126,7 @@ public class MuleHierarchicalBeanDefinitionParserDelegate extends BeanDefinition
 
                 if (shouldUseNewMechanism(element))
                 {
-                    if (element.getLocalName().equals("operation"))
+                    if (element.getLocalName().equals("operation") || element.getLocalName().equals("config") || element.getLocalName().equals("config-ref"))
                     {
                         return null;
                     }
