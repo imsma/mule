@@ -11,6 +11,7 @@ import static org.mule.metadata.java.utils.JavaTypeUtils.getGenericTypeAt;
 import static org.mule.metadata.java.utils.JavaTypeUtils.getType;
 import static org.mule.metadata.utils.MetadataTypeUtils.getDefaultValue;
 import static org.mule.metadata.utils.MetadataTypeUtils.getSingleAnnotation;
+import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildCollectionConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromChildMapConfiguration;
 import static org.mule.runtime.config.spring.dsl.api.AttributeDefinition.Builder.fromFixedValue;
@@ -43,15 +44,19 @@ import org.mule.runtime.config.spring.dsl.api.ComponentBuildingDefinition.Builde
 import org.mule.runtime.config.spring.dsl.api.KeyAttributeDefinitionPair;
 import org.mule.runtime.core.api.MuleEvent;
 import org.mule.runtime.core.api.MuleRuntimeException;
+import org.mule.runtime.core.api.NestedProcessor;
 import org.mule.runtime.core.api.config.ConfigurationException;
+import org.mule.runtime.core.api.processor.MessageProcessor;
 import org.mule.runtime.core.util.ClassUtils;
 import org.mule.runtime.core.util.TemplateParser;
 import org.mule.runtime.core.util.ValueHolder;
 import org.mule.runtime.extension.api.introspection.declaration.type.ExtensionsTypeLoaderFactory;
 import org.mule.runtime.extension.api.introspection.parameter.ExpressionSupport;
 import org.mule.runtime.extension.api.introspection.parameter.ParameterModel;
+import org.mule.runtime.module.extension.internal.config.dsl.config.NestedProcessorObjectFactory;
 import org.mule.runtime.module.extension.internal.introspection.BasicTypeMetadataVisitor;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ExpressionFunctionValueResolver;
+import org.mule.runtime.module.extension.internal.runtime.resolver.NestedProcessorValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.RegistryLookupValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.TypeSafeExpressionValueResolver;
@@ -136,8 +141,14 @@ public abstract class ExtensionDefinitionParser
                         defaultVisit(objectType);
                         return;
                     }
-
-                    parsePojoParameter(parameter);
+                    else if (isNestedProcessor(objectType))
+                    {
+                        parseNestedProcessor(parameter);
+                    }
+                    else
+                    {
+                        parsePojoParameter(parameter);
+                    }
                 }
 
                 @Override
@@ -149,7 +160,19 @@ public abstract class ExtensionDefinitionParser
                 @Override
                 public void visitArrayType(ArrayType arrayType)
                 {
-                    parseCollectionParameter(parameter, arrayType);
+                    if (isNestedProcessor(arrayType.getType()))
+                    {
+                        parseNestedProcessorList(parameter);
+                    }
+                    else
+                    {
+                        parseCollectionParameter(parameter, arrayType);
+                    }
+                }
+
+                private boolean isNestedProcessor(MetadataType type)
+                {
+                    return NestedProcessor.class.isAssignableFrom(getType(type));
                 }
             });
         });
@@ -415,6 +438,29 @@ public abstract class ExtensionDefinitionParser
     private void addParameter(String key, AttributeDefinition.Builder definitionBuilder)
     {
         parameters.put(key, definitionBuilder);
+    }
+
+    private void parseNestedProcessor(ParameterModel parameterModel)
+    {
+        addNestedProcessorDefinition(parameterModel, fromChildConfiguration(NestedProcessorValueResolver.class));
+    }
+
+    private void parseNestedProcessorList(ParameterModel parameterModel)
+    {
+        addNestedProcessorDefinition(parameterModel, fromChildCollectionConfiguration(NestedProcessorValueResolver.class));
+    }
+
+    private void addNestedProcessorDefinition(ParameterModel parameterModel, AttributeDefinition.Builder parameterDefinitionBuilder)
+    {
+        final String processorElementName = hyphenize(parameterModel.getName());
+        addParameter(getChildKey(parameterModel.getName()), parameterDefinitionBuilder.withWrapperIdentifier(processorElementName));
+
+        addDefinition(baseDefinitionBuilder.copy()
+                              .withIdentifier(processorElementName)
+                              .withTypeDefinition(fromType(NestedProcessorValueResolver.class))
+                              .withConstructorParameterDefinition(fromChildConfiguration(MessageProcessor.class).build())
+                              .withObjectFactoryType(NestedProcessorObjectFactory.class)
+                              .build());
     }
 
     private boolean isExpressionFunction(MetadataType metadataType)

@@ -43,7 +43,7 @@ public final class NestedProcessorValueResolver implements ValueResolver<NestedP
     }
 
     /**
-     * @return {@value true}
+     * @return {@code true}
      */
     @Override
     public boolean isDynamic()

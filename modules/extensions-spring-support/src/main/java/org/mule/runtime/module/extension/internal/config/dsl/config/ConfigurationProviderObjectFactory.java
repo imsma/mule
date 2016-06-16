@@ -9,13 +9,17 @@ package org.mule.runtime.module.extension.internal.config.dsl.config;
 import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
 import static org.mule.runtime.core.api.config.MuleProperties.OBJECT_TIME_SUPPLIER;
+import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.disposeIfNeeded;
+import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.initialiseIfNeeded;
+import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.startIfNeeded;
+import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.stopIfNeeded;
 import org.mule.runtime.api.connection.ConnectionProvider;
+import org.mule.runtime.config.spring.dsl.api.ObjectFactory;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.MuleException;
 import org.mule.runtime.core.api.MuleRuntimeException;
 import org.mule.runtime.core.api.lifecycle.InitialisationException;
 import org.mule.runtime.core.api.lifecycle.Lifecycle;
-import org.mule.runtime.core.api.lifecycle.LifecycleUtils;
 import org.mule.runtime.core.time.TimeSupplier;
 import org.mule.runtime.extension.api.introspection.config.RuntimeConfigurationModel;
 import org.mule.runtime.extension.api.runtime.ConfigurationProvider;
@@ -32,10 +36,10 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class ConfigurationProviderObjectFactory extends AbstractExtensionObjectFactory<ConfigurationProvider<Object>> implements Lifecycle
+class ConfigurationProviderObjectFactory extends AbstractExtensionObjectFactory<ConfigurationProvider<Object>> implements Lifecycle, ObjectFactory<ConfigurationProvider<Object>>
 {
 
-    private static final Logger logger = LoggerFactory.getLogger(ConfigurationProviderObjectFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationProviderObjectFactory.class);
 
     private final String name;
     private final RuntimeConfigurationModel configurationModel;
@@ -136,25 +140,25 @@ class ConfigurationProviderObjectFactory extends AbstractExtensionObjectFactory<
         {
             throw new MuleRuntimeException(e);
         }
-        LifecycleUtils.initialiseIfNeeded(instance);
+        initialiseIfNeeded(instance);
     }
 
 
     @Override
     public void dispose()
     {
-        LifecycleUtils.disposeIfNeeded(instance, logger);
+        disposeIfNeeded(instance, LOGGER);
     }
 
     @Override
     public void start() throws MuleException
     {
-        LifecycleUtils.startIfNeeded(instance);
+        startIfNeeded(instance);
     }
 
     @Override
     public void stop() throws MuleException
     {
-        LifecycleUtils.stopIfNeeded(instance);
+        stopIfNeeded(instance);
     }
 }
