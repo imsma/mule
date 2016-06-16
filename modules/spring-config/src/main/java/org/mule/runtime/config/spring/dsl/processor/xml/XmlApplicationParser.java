@@ -16,15 +16,16 @@ import org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfoProvider;
 import org.mule.runtime.config.spring.dsl.processor.ConfigLine;
 import org.mule.runtime.config.spring.dsl.processor.ConfigLineProvider;
 import org.mule.runtime.core.api.MuleRuntimeException;
+import org.mule.runtime.core.api.registry.ServiceRegistry;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
 
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.ServiceLoader;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -34,7 +35,7 @@ import org.w3c.dom.NodeList;
 /**
  * Simple parser that transforms an XML document to a set of {@link org.mule.runtime.config.spring.dsl.processor.ConfigLine}
  * objects.
- *
+ * <p>
  * It uses the SPI interface {@link org.mule.runtime.config.spring.dsl.api.xml.XmlNamespaceInfoProvider} to locate for
  * all namespace info provided and normalize the namespace from the XML document.
  *
@@ -46,7 +47,7 @@ public class XmlApplicationParser
     private static final String COLON = ":";
     private static final Map<String, String> predefinedNamespace = new HashMap<>();
     private static final String UNDEFINED_NAMESPACE = "undefined";
-    private final ServiceLoader<XmlNamespaceInfoProvider> xmlNamespaceInfoProviders;
+    private final List<XmlNamespaceInfoProvider> namespaceInfoProviders;
     private final Cache<String, String> namespaceCache;
 
     static
@@ -55,9 +56,9 @@ public class XmlApplicationParser
         predefinedNamespace.put("http://www.springframework.org/schema/context", SPRING_CONTEXT_NAMESPACE);
     }
 
-    public XmlApplicationParser()
+    public XmlApplicationParser(ServiceRegistry serviceRegistry)
     {
-        xmlNamespaceInfoProviders = ServiceLoader.load(XmlNamespaceInfoProvider.class);
+        namespaceInfoProviders = ImmutableList.copyOf(serviceRegistry.lookupProviders(XmlNamespaceInfoProvider.class));
         namespaceCache = CacheBuilder.newBuilder().build();
     }
 
@@ -67,10 +68,8 @@ public class XmlApplicationParser
         {
             return predefinedNamespace.get(namespaceUri);
         }
-        Iterator<XmlNamespaceInfoProvider> iterator = xmlNamespaceInfoProviders.iterator();
-        while (iterator.hasNext())
+        for (XmlNamespaceInfoProvider namespaceInfoProvider : namespaceInfoProviders)
         {
-            XmlNamespaceInfoProvider namespaceInfoProvider = iterator.next();
             Optional<XmlNamespaceInfo> matchingXmlNamespaceInfo = namespaceInfoProvider
                     .getXmlNamespacesInfo()
                     .stream()

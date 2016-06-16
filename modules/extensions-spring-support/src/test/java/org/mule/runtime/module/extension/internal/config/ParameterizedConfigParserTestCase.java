@@ -24,7 +24,6 @@ import static org.mule.test.heisenberg.extension.HeisenbergExtension.AGE;
 import static org.mule.test.heisenberg.extension.HeisenbergExtension.HEISENBERG;
 import static org.mule.test.heisenberg.extension.model.types.WeaponType.FIRE_WEAPON;
 import org.mule.runtime.core.api.MuleEvent;
-import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.test.heisenberg.extension.HeisenbergExtension;
 import org.mule.test.heisenberg.extension.model.HealthStatus;
 import org.mule.test.heisenberg.extension.model.KnockeableDoor;
@@ -67,10 +66,6 @@ public class ParameterizedConfigParserTestCase extends AbstractConfigParserTestC
     private static final int P2P_QUANTITY = 25;
     private static final String HANK = "Hank";
     private static final String MONEY = "1000000";
-    private static final String SKYLER = "Skyler";
-    private static final String SAUL = "Saul";
-    private static final String WHITE_ADDRESS = "308 Negra Arroyo Lane";
-    private static final String SHOPPING_MALL = "Shopping Mall";
     private static final String LAB_ADDRESS = "Pollos Hermanos";
     private static final String FIRST_ENDEVOUR = "Gray Matter Technologies";
     private static final String LITERAL_EXPRESSION = "#[money]";
@@ -291,8 +286,7 @@ public class ParameterizedConfigParserTestCase extends AbstractConfigParserTestC
 
     public static KnockeableDoor getDoor() throws Exception
     {
-        ValueResolver<KnockeableDoor> door = muleContext.getRegistry().lookupObject("door");
-        return door.resolve(getTestEvent(""));
+        return muleContext.getRegistry().lookupObject("door");
     }
 
     private void assertLabeledRicin(HeisenbergExtension heisenberg)

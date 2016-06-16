@@ -34,7 +34,6 @@ import org.mule.metadata.api.model.DateTimeType;
 import org.mule.metadata.api.model.DateType;
 import org.mule.metadata.api.model.DictionaryType;
 import org.mule.metadata.api.model.MetadataType;
-import org.mule.metadata.api.model.ObjectFieldType;
 import org.mule.metadata.api.model.ObjectType;
 import org.mule.metadata.api.visitor.MetadataTypeVisitor;
 import org.mule.metadata.java.annotation.GenericTypesAnnotation;
@@ -81,6 +80,8 @@ public abstract class ExtensionDefinitionParser
 
     private static final String DATE_FORMAT = "yyyy-MM-dd'T'hh:mm:ss";
     private static final String CALENDAR_FORMAT = "yyyy-MM-dd'T'hh:mm:ssX";
+    static final String CHILD_ELEMENT_KEY_PREFIX = "<<";
+    static final String CHILD_ELEMENT_KEY_SUFFIX = ">>";
 
     private final TemplateParser parser = TemplateParser.createMuleStyleParser();
     private final ConversionService conversionService = new DefaultConversionService();
@@ -175,7 +176,7 @@ public abstract class ExtensionDefinitionParser
         final String parameterName = parameter.getName();
         final String mapElementName = hyphenize(pluralize(parameterName));
 
-        addParameter(parameterName, fromChildMapConfiguration(keyClass, valueClass)
+        addParameter(getChildKey(parameter), fromChildMapConfiguration(keyClass, valueClass)
                 .withWrapperIdentifier(mapElementName)
                 .withDefaultValue(parameter.getDefaultValue()));
 
@@ -248,7 +249,7 @@ public abstract class ExtensionDefinitionParser
         }
 
         final String collectionElementName = hyphenize(parameter.getName());
-        addParameter(parameter.getName(), fromChildConfiguration(collectionType).withWrapperIdentifier(collectionElementName));
+        addParameter(getChildKey(parameter), fromChildConfiguration(collectionType).withWrapperIdentifier(collectionElementName));
         addDefinition(baseDefinitionBuilder.copy()
                               .withIdentifier(collectionElementName)
                               .withTypeDefinition(fromType(collectionType))
@@ -374,7 +375,7 @@ public abstract class ExtensionDefinitionParser
 
     protected AttributeDefinition.Builder parseAttributeParameter(ParameterModel parameterModel)
     {
-        return parseAttributeParameter(getMemberName(parameterModel, parameterModel.getName()),
+        return parseAttributeParameter(getKey(parameterModel),
                                        parameterModel.getName(),
                                        parameterModel.getType(),
                                        parameterModel.getDefaultValue(),
@@ -392,7 +393,7 @@ public abstract class ExtensionDefinitionParser
 
     protected void parsePojoParameter(ParameterModel parameterModel)
     {
-        parsePojoParameter(getMemberName(parameterModel, parameterModel.getName()),
+        parsePojoParameter(getKey(parameterModel),
                            parameterModel.getName(),
                            (ObjectType) parameterModel.getType(),
                            parameterModel.getDefaultValue(),
@@ -403,23 +404,7 @@ public abstract class ExtensionDefinitionParser
     protected void parsePojoParameter(String key, String name, ObjectType type, Object defaultValue, ExpressionSupport expressionSupport, boolean required)
     {
         parseAttributeParameter(key, name, type, defaultValue, expressionSupport, required);
-        addParameter(name, fromChildConfiguration(ValueResolver.class).withWrapperIdentifier(hyphenize(name)));
-        for (ObjectFieldType field : type.getFields())
-        {
-            field.getValue().accept(new MetadataTypeVisitor()
-            {
-                @Override
-                public void visitObject(ObjectType objectType)
-                {
-                    addDefinition(baseDefinitionBuilder.copy()
-                                          .withIdentifier(hyphenize(field.getKey().getName().getLocalPart()))
-                                          .withTypeDefinition(fromType(ValueResolver.class))
-                                          .withObjectFactoryType(TopLevelParameterObjectFactory.class)
-                                          .withConstructorParameterDefinition(fromFixedValue(objectType).build())
-                                          .build());
-                }
-            });
-        }
+        addParameter(getChildKey(key), fromChildConfiguration(ValueResolver.class).withWrapperIdentifier(hyphenize(name)));
     }
 
     protected void addDefinition(ComponentBuildingDefinition definition)
@@ -518,6 +503,22 @@ public abstract class ExtensionDefinitionParser
         }
 
         throw new IllegalArgumentException(format("Could not transform value of type '%s' to Date", value != null ? value.getClass().getName() : "null"));
+    }
+
+
+    private String getKey(ParameterModel parameterModel)
+    {
+        return getMemberName(parameterModel, parameterModel.getName());
+    }
+
+    private String getChildKey(ParameterModel parameterModel)
+    {
+        return getChildKey(getKey(parameterModel));
+    }
+
+    private String getChildKey(String key)
+    {
+        return String.format("%s%s%s", CHILD_ELEMENT_KEY_PREFIX, key, CHILD_ELEMENT_KEY_SUFFIX);
     }
 }
 

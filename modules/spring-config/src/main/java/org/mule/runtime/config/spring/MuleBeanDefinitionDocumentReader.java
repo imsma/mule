@@ -33,13 +33,14 @@ public class MuleBeanDefinitionDocumentReader extends DefaultBeanDefinitionDocum
 {
 
     private final BeanDefinitionFactory beanDefinitionFactory;
-    private final XmlApplicationParser xmlApplicationParser = new XmlApplicationParser();
+    private final XmlApplicationParser xmlApplicationParser;
     //This same instance is called several time to parse different XML files so a stack is needed to save previous state.
     private final Stack<ApplicationModel> applicationModelStack = new Stack<>();
 
-    public MuleBeanDefinitionDocumentReader(BeanDefinitionFactory beanDefinitionFactory)
+    public MuleBeanDefinitionDocumentReader(BeanDefinitionFactory beanDefinitionFactory, XmlApplicationParser xmlApplicationParser)
     {
         this.beanDefinitionFactory = beanDefinitionFactory;
+        this.xmlApplicationParser = xmlApplicationParser;
     }
 
     @Override

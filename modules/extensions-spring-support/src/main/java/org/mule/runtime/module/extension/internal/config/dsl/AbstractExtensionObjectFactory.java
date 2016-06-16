@@ -6,13 +6,17 @@
  */
 package org.mule.runtime.module.extension.internal.config.dsl;
 
-import static com.google.common.collect.ImmutableList.copyOf;
+import static org.mule.runtime.module.extension.internal.config.dsl.ExtensionDefinitionParser.CHILD_ELEMENT_KEY_PREFIX;
+import static org.mule.runtime.module.extension.internal.config.dsl.ExtensionDefinitionParser.CHILD_ELEMENT_KEY_SUFFIX;
 import org.mule.runtime.config.spring.dsl.api.ObjectFactory;
+import org.mule.runtime.core.util.collection.ImmutableListCollector;
 import org.mule.runtime.module.extension.internal.runtime.resolver.CollectionValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.MapValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
+
+import com.google.common.collect.ImmutableMap;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,7 +36,7 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
 
     public void setParameters(Map<String, Object> parameters)
     {
-        this.parameters = parameters;
+        this.parameters = normalize(parameters);
     }
 
     protected ResolverSet getParametersAsResolverSet()
@@ -52,7 +56,7 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
         }
         else if (value instanceof Collection)
         {
-            resolver = CollectionValueResolver.of((Class<? extends Collection>) value.getClass(), copyOf((Iterable) value));
+            resolver = CollectionValueResolver.of((Class<? extends Collection>) value.getClass(), (List) ((Collection) value).stream().map(this::toValueResolver).collect(new ImmutableListCollector()));
         }
         else if (value instanceof Map)
         {
@@ -70,5 +74,36 @@ public abstract class AbstractExtensionObjectFactory<T> implements ObjectFactory
             resolver = new StaticValueResolver<>(value);
         }
         return resolver;
+    }
+
+    private Map<String, Object> normalize(Map<String, Object> parameters)
+    {
+        ImmutableMap.Builder<String, Object> normalized = ImmutableMap.builder();
+        parameters.forEach((key, value) -> {
+            String normalizedKey = key;
+
+            if (isChildKey(key))
+            {
+                normalizedKey = unwrapChildKey(key);
+                if (parameters.containsKey(normalizedKey))
+                {
+                    throw new IllegalArgumentException(String.format("Parameter '%s' was specified as an attribute and as a child element at the same time.", normalizedKey));
+                }
+            }
+
+            normalized.put(normalizedKey, value);
+        });
+
+        return normalized.build();
+    }
+
+    private boolean isChildKey(String key)
+    {
+        return key.startsWith(CHILD_ELEMENT_KEY_PREFIX) && key.endsWith(CHILD_ELEMENT_KEY_SUFFIX);
+    }
+
+    private String unwrapChildKey(String key)
+    {
+        return key.replaceAll(CHILD_ELEMENT_KEY_PREFIX, "").replaceAll(CHILD_ELEMENT_KEY_SUFFIX, "");
     }
 }

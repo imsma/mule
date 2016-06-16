@@ -18,7 +18,7 @@ public class ExtensionsXmlNamespaceInfoProvider implements XmlNamespaceInfoProvi
     @Override
     public Collection<XmlNamespaceInfo> getXmlNamespacesInfo()
     {
-        return asList(new ExtensionXmlNamespaceInfo(),
-                      new HeisenbergXmlNamespaceInfo());
+        return asList(new ExtensionXmlNamespaceInfo());
+                      //new HeisenbergXmlNamespaceInfo());
     }
 }

@@ -8,7 +8,10 @@ package org.mule.runtime.module.extension.internal.config.dsl;
 
 import static org.mule.metadata.java.utils.JavaTypeUtils.getType;
 import static org.mule.runtime.module.extension.internal.util.IntrospectionUtils.getFieldByAlias;
+import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getInitialiserEvent;
 import org.mule.metadata.api.model.ObjectType;
+import org.mule.runtime.core.api.MuleContext;
+import org.mule.runtime.core.api.context.MuleContextAware;
 import org.mule.runtime.module.extension.internal.runtime.DefaultObjectBuilder;
 import org.mule.runtime.module.extension.internal.runtime.ObjectBuilder;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ObjectBuilderValueResolver;
@@ -16,11 +19,12 @@ import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver
 
 import java.lang.reflect.Field;
 
-public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFactory<ValueResolver<Object>>
+public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFactory<Object> implements MuleContextAware
 {
 
+    private final ObjectBuilder builder;
     private final Class<Object> objectClass;
-    final ObjectBuilder builder;
+    private MuleContext muleContext;
 
     public TopLevelParameterObjectFactory(ObjectType type)
     {
@@ -29,9 +33,8 @@ public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFacto
     }
 
     @Override
-    public ValueResolver<Object> getObject() throws Exception
+    public Object getObject() throws Exception
     {
-
         getParameters().forEach((key, value) -> {
             Field field = getFieldByAlias(objectClass, key);
             if (field != null)
@@ -40,6 +43,13 @@ public class TopLevelParameterObjectFactory extends AbstractExtensionObjectFacto
             }
         });
 
-        return new ObjectBuilderValueResolver<>(builder);
+        ValueResolver<Object> resolver = new ObjectBuilderValueResolver<>(builder);
+        return resolver.isDynamic() ? resolver : resolver.resolve(getInitialiserEvent(muleContext));
+    }
+
+    @Override
+    public void setMuleContext(MuleContext muleContext)
+    {
+        this.muleContext = muleContext;
     }
 }

@@ -10,9 +10,9 @@ import static org.mule.runtime.core.util.Preconditions.checkArgument;
 import org.mule.runtime.extension.api.introspection.parameter.ParameterModel;
 
 import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableMap;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -91,7 +91,7 @@ public class ResolverSetResult
 
     private ResolverSetResult(Map<String, Object> evaluationResult, int hashCode)
     {
-        this.evaluationResult = ImmutableMap.copyOf(evaluationResult);
+        this.evaluationResult = new HashMap<>(evaluationResult);
         this.hashCode = hashCode;
     }
 
