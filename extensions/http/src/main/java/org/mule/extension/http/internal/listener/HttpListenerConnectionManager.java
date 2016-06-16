@@ -30,6 +30,7 @@ import org.mule.runtime.core.config.MutableThreadingProfile;
 import org.mule.runtime.core.config.i18n.CoreMessages;
 import org.mule.runtime.core.util.NetworkUtils;
 import org.mule.runtime.core.util.concurrent.ThreadNameHelper;
+import org.mule.runtime.extension.api.annotation.Parameter;
 import org.mule.runtime.module.http.internal.listener.HttpListenerRegistry;
 import org.mule.runtime.module.http.internal.listener.HttpServerManager;
 import org.mule.runtime.module.http.internal.listener.Server;
@@ -57,6 +58,7 @@ public class HttpListenerConnectionManager implements HttpServerFactory, Initial
     private static final String LISTENER_THREAD_NAME_PREFIX = "http.listener";
     private static final int DEFAULT_MAX_THREADS = 128;
 
+    @Parameter
     private HttpListenerRegistry httpListenerRegistry = new HttpListenerRegistry();
     private ThreadingProfile workerThreadingProfile;
     private HttpServerManager httpServerManager;

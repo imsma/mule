@@ -18,9 +18,11 @@ import org.mule.extension.http.api.request.proxy.ProxyConfig;
 import org.mule.extension.http.api.request.validator.FailureStatusCodeValidator;
 import org.mule.extension.http.api.request.validator.ResponseValidator;
 import org.mule.extension.http.api.request.validator.SuccessStatusCodeValidator;
+import org.mule.extension.http.internal.listener.HttpListenerConnectionManager;
 import org.mule.module.socket.api.SocketsExtension;
 import org.mule.module.socket.api.TcpClientSocketProperties;
 import org.mule.runtime.extension.api.annotation.Configurations;
+import org.mule.runtime.extension.api.annotation.Export;
 import org.mule.runtime.extension.api.annotation.Extension;
 import org.mule.runtime.extension.api.annotation.Import;
 import org.mule.runtime.extension.api.annotation.Operations;
@@ -43,6 +45,8 @@ import org.mule.runtime.extension.api.annotation.capability.Xml;
 @SubTypeMapping(baseType = ResponseValidator.class, subTypes = {SuccessStatusCodeValidator.class, FailureStatusCodeValidator.class})
 @Import(type = TcpClientSocketProperties.class, from = SocketsExtension.class)
 @Xml(namespaceLocation = "http://www.mulesoft.org/schema/mule/httpn", namespace = "httpn")
+//@Export(resources = {"/META-INF/services/org/mule/runtime/core/config"})
+@Export(resources = {"/META-INF/services/org/mule/runtime/core/config"}, classes = {HttpListenerConnectionManager.class})
 public class HttpConnector
 {
 

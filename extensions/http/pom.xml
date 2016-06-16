@@ -16,18 +16,18 @@
     <name>Mule HTTP Extension</name>
     <description>A Mule extension that provides HTTP server and client functionality</description>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <!--TODO: https://www.mulesoft.org/jira/browse/MULE-9776 remove this when http is packages as zip plugin -->
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <!--<build>-->
+        <!--<plugins>-->
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-dependency-plugin</artifactId>-->
+                <!--&lt;!&ndash;TODO: https://www.mulesoft.org/jira/browse/MULE-9776 remove this when http is packages as zip plugin &ndash;&gt;-->
+                <!--<configuration>-->
+                    <!--<skip>true</skip>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
+        <!--</plugins>-->
+    <!--</build>-->
 
     <dependencies>
         <dependency>
@@ -96,6 +96,10 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
         </dependency>
 
         <!-- Tests -->
