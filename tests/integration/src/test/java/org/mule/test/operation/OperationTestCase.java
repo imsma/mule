@@ -7,11 +7,12 @@
 package org.mule.test.operation;
 
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import org.mule.functional.junit4.FunctionalTestCase;
 import org.mule.runtime.core.api.MuleEvent;
+import org.mule.runtime.extension.api.annotation.param.Ignore;
 
 import org.hamcrest.core.Is;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class OperationTestCase extends FunctionalTestCase
@@ -20,26 +21,62 @@ public class OperationTestCase extends FunctionalTestCase
     @Override
     protected String getConfigFile()
     {
-        return "operation-config.xml";
+        return "operation-flow.xml";
     }
 
     @Test
-    public void test() throws Exception
+    public void testSetPayloadHardcodedFlow() throws Exception
     {
-        MuleEvent muleEvent = flowRunner("flow").run();
-        assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo"));
-        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarValue"));
+        MuleEvent muleEvent = flowRunner("testSetPayloadHardcodedFlow").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("hardcoded value"));
+    }
 
-        muleEvent = flowRunner("flow2").run();
-        assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo2"));
-        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarValue2"));
+    @Test
+    public void testSetPayloadParamFlow() throws Exception
+    {
+        MuleEvent muleEvent = flowRunner("testSetPayloadParamFlow").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("new payload"));
+    }
 
-        muleEvent = flowRunner("flow3").run();
-        assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo3"));
-        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarDefault"));
+    @Test
+    public void testSetPayloadParamDefaultFlow() throws Exception
+    {
+        MuleEvent muleEvent = flowRunner("testSetPayloadParamDefaultFlow").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("15"));
+    }
 
-        muleEvent = flowRunner("flow4").run();
-        assertThat(muleEvent.getMessage().getPayload(), Is.is("hola amigoooooo4"));
-        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("testVarConfigValue"));
+    @Test
+    @Ignore //until we have muleevent/flowVars isolation this test will fail
+    public void testSetPayloadNoSideEffectFlow() throws Exception
+    {
+        MuleEvent muleEvent = flowRunner("testSetPayloadNoSideEffectFlow").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("10"));
+        assertThat(muleEvent.getFlowVariable("testVar"), Is.is("unchanged value"));
+    }
+
+    @Test
+    public void testDoNothingFlow() throws Exception
+    {
+        MuleEvent muleEvent = flowRunner("testDoNothingFlow").run();
+        assertThat(muleEvent.getMessage().getPayload(), Is.is("before calling"));
+        assertThat(muleEvent.getFlowVariable("variableBeforeCalling"), Is.is("value of flowvar before calling"));
+    }
+
+    @Test
+    @Ignore
+    //if this test does work at some point, it will probably break the entire XML file, as this validation will happen during start up (invalidating the whole XML file. similar to a SaxParseException)
+    public void testWithoutParametersFlow() throws Exception
+    {
+        flowRunner("testWithoutParametersFlow").run();
+        fail("should not have reach this point");
+    }
+
+    @Test
+    @Ignore
+    //if this test does work at some point, it will probably break the entire XML file, as this validation will happen during start up (invalidating the whole XML file. similar to a SaxParseException)
+    public void testWithMoreThanExpectedParametersFlow() throws Exception
+    {
+        flowRunner("testWithMoreThanExpectedParametersFlow").run();
+        fail("should not have reach this point");
     }
 }

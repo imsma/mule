@@ -148,7 +148,7 @@
             <xsd:element ref="custom-queue-store" minOccurs="0" maxOccurs="unbounded"/>
             <xsd:element ref="abstract-processing-strategy" minOccurs="0" maxOccurs="unbounded"/>
             <xsd:element ref="operation"/>
-            <xsd:element ref="config"/>
+            <xsd:element ref="module"/>
         </xsd:choice>
     </xsd:group>
 
@@ -187,6 +187,22 @@
         </xsd:complexContent>
     </xsd:complexType>
 
+    <xsd:complexType name="moduleConfigType">
+        <xsd:complexContent>
+            <xsd:extension base="abstractExtensionType">
+                <xsd:sequence maxOccurs="unbounded" minOccurs="1">
+                    <xsd:choice >
+                        <xsd:element ref="config" />
+                        <xsd:element ref="operation" />
+                    </xsd:choice>
+                </xsd:sequence>
+                <xsd:attribute name="namespace" use="required"/>
+                <xsd:attribute name="version" use="optional" default="1.0.0"/>
+                <xsd:attribute name="minMuleVersion" use="optional" default="4.0"/>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
     <xsd:complexType name="operationConfigType">
         <xsd:complexContent>
             <xsd:extension base="abstractExtensionType">
@@ -209,7 +225,15 @@
         </xsd:complexContent>
     </xsd:complexType>
 
-    <xsd:element name="config" type="operationConfigType" substitutionGroup="abstract-extension">
+    <xsd:element name="module" type="moduleConfigType" substitutionGroup="abstract-extension">
+        <xsd:annotation>
+            <xsd:documentation>
+                A transformer that sets the paylaod with the provided value
+            </xsd:documentation>
+        </xsd:annotation>
+    </xsd:element>
+
+    <xsd:element name="config" type="operationConfigType">
         <xsd:annotation>
             <xsd:documentation>
                 A transformer that sets the paylaod with the provided value
@@ -235,13 +259,14 @@
             <xsd:complexContent>
                 <xsd:extension base="abstractMessageProcessorType">
                     <xsd:sequence>
-                        <xsd:element name="parameter" minOccurs="1" maxOccurs="unbounded">
+                        <xsd:element name="parameter" minOccurs="0" maxOccurs="unbounded">
                             <xsd:complexType>
                                 <xsd:attribute name="parameterName"/>
                                 <xsd:attribute name="value"/>
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:sequence>
+                    <xsd:attribute name="module"/>
                     <xsd:attribute name="operation"/>
                     <xsd:attribute name="config"/>
                 </xsd:extension>
@@ -267,7 +292,7 @@
                         </xsd:element>
                     </xsd:sequence>
                     <xsd:attribute name="name"/>
-                    <xsd:attribute name="config"/>
+                    <xsd:attribute name="module"/>
                 </xsd:extension>
             </xsd:complexContent>
         </xsd:complexType>
