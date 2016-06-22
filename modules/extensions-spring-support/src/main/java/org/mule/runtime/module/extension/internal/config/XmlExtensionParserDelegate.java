@@ -665,12 +665,14 @@ final class XmlExtensionParserDelegate
             final MetadataType fieldType = objectField.getValue();
             final String parameterName = objectField.getKey().getName().getLocalPart();
 
+            // TODO: MULE-9960
             ValueResolver resolver = getResolverFromAttribute(element, parameterName, fieldType, null);
             if (resolver == null)
             {
                 ElementDescriptor childElement = element.getChildByName(hyphenize(parameterName));
                 if (childElement != null)
                 {
+                    // TODO: MULE-9960
                     // recursive parsing for object fields
                     resolver = parseElement(getParameterParsingDescriptor(element, parameterName, fieldType, null));
                 }

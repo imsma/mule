@@ -29,11 +29,8 @@ public class EmailContent
 
     /**
      * The text body of the message content.
-     * <p>
-     * The default value is an empty body.
      */
     @Parameter
-    @Optional(defaultValue = " ")
     private String body;
 
     /**
@@ -44,6 +41,15 @@ public class EmailContent
     @Parameter
     @Optional(defaultValue = "text/plain")
     private String contentType;
+
+    /**
+     * The character encoding of the body.
+     * <p>
+     * The default value is "UTF-8"
+     */
+    @Parameter
+    @Optional(defaultValue = "UTF-8")
+    private String charset;
 
     /**
      * @return the body of the message content. The body
@@ -59,6 +65,16 @@ public class EmailContent
      */
     public String getContentType()
     {
-        return contentType;
+        // TODO: remove if when MULE-9960 is fixed since default values are not being injected properly.
+        return contentType == null ? "text/plain" : contentType;
+    }
+
+    /**
+     * @return the charset of the body.
+     */
+    public String getCharset()
+    {
+        // TODO: remove if when MULE-9960 is fixed since default values are not being injected properly.
+        return charset == null ? "UTF-8" : charset;
     }
 }

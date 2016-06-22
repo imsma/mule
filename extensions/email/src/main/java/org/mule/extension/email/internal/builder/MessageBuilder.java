@@ -6,6 +6,7 @@
  */
 package org.mule.extension.email.internal.builder;
 
+import static java.lang.String.format;
 import static javax.mail.Message.RecipientType.BCC;
 import static javax.mail.Message.RecipientType.CC;
 import static javax.mail.Message.RecipientType.TO;
@@ -48,7 +49,8 @@ public final class MessageBuilder
 
     private Map<String, DataHandler> attachments;
     private String content = "";
-    private String contentType = MimeTypes.TEXT;
+    private String contentType;
+    private String charset;
 
     private MessageBuilder(Session s) throws MessagingException
     {
@@ -245,10 +247,11 @@ public final class MessageBuilder
      * @return this {@link MessageBuilder}
      * @throws MessagingException
      */
-    public MessageBuilder withContent(String content, String contentType) throws MessagingException
+    public MessageBuilder withContent(String content, String contentType, String charset) throws MessagingException
     {
         this.content = content;
         this.contentType = contentType;
+        this.charset = charset;
         return this;
     }
 
@@ -263,6 +266,7 @@ public final class MessageBuilder
     public MessageBuilder withContent(String content) throws MessagingException
     {
         this.content = content;
+        this.contentType = MimeTypes.TEXT;
         return this;
     }
 
@@ -292,7 +296,7 @@ public final class MessageBuilder
             MimeMultipart multipart = new MimeMultipart();
             MimeBodyPart bodyPart = new MimeBodyPart();
             bodyPart.setDisposition(INLINE);
-            bodyPart.setContent(content, contentType);
+            bodyPart.setContent(content, getBodyType());
             multipart.addBodyPart(bodyPart);
 
             MimeBodyPart attachmentPart;
@@ -318,10 +322,18 @@ public final class MessageBuilder
         else
         {
             this.message.setDisposition(INLINE);
-            this.message.setContent(content, contentType);
+            this.message.setContent(content, getBodyType());
         }
 
         return message;
     }
 
+    private String getBodyType()
+    {
+        if (charset != null)
+        {
+            return  format("%s; charset=%s", contentType, charset);
+        }
+        return contentType;
+    }
 }
